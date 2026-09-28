@@ -8,7 +8,6 @@
 > Bölüm B'nin yerel kontrolleri için Node.js 18+ (22 ile test edildi). Bölüm A için internet gerekir (DummyJSON).
 
 **Başlama – bitiş** (Europe/Istanbul):
-- Görev alındı: 11:00. Kodlamaya başlandı: 11:23.
 - **Zorunlu kısımların bitişi (Bölüm A + Bölüm B): ~12:35**
 - **Testler ve eklemelerin bitişi: 13:35** (ürün arama bonusu, HTML ve kanal özeti, canlı kabul testi, prompt injection testleri, CI, dokümantasyon)
 
