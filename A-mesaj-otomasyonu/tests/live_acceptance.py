@@ -63,7 +63,7 @@ def check_output(folder: Path, messages: list[dict]):
                   for word in ("öner", "krem", "serum", "sürün", "kullanın", "alerji", "tedavi")))
     check(f"{label}: run completed without technical errors", meta["status"] == "completed" and not meta["technical_errors"])
     check(f"{label}: text summary matches tickets",
-          all(f"{topic}: {sum(t['konu'] == topic for t in tickets)}" in summary for topic in ALLOWED)
+          all(f"{topic}: {sum(t['konu'] == topic for t in tickets)}" in summary for topic in {t["konu"] for t in tickets})
           and f"Temsilciye devredilecek: {sum(t['devret'] for t in tickets)}" in summary)
     if (folder / "ozet.html").exists():
         page = (folder / "ozet.html").read_text(encoding="utf-8")

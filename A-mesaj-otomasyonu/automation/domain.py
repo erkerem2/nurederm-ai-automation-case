@@ -11,6 +11,7 @@ class Topic(StrEnum):
     ORDER = "siparis_durumu"
     RETURN = "iade_sikayet"
     SENSITIVE = "hassas_konu"
+    SPAM = "istenmeyen_mesaj"
     OTHER = "diger"
 
 
@@ -46,12 +47,11 @@ class Message:
 class Classification:
     topic: Topic
     secondary_topics: tuple[Topic, ...] = ()
-    is_spam: bool = False
     product_query: str = ""
 
     @classmethod
     def parse(cls, value: object) -> "Classification":
-        if not isinstance(value, dict) or set(value) != {"topic", "secondary_topics", "is_spam", "product_query"}:
+        if not isinstance(value, dict) or set(value) != {"topic", "secondary_topics", "product_query"}:
             raise ProviderError("classification_invalid_schema")
         try:
             topic = Topic(value["topic"])
@@ -61,8 +61,6 @@ class Classification:
             topics = tuple(Topic(item) for item in secondary)
             if topic in topics or len(set(topics)) != len(topics):
                 raise ValueError
-            if type(value["is_spam"]) is not bool:
-                raise ValueError
             query = value["product_query"]
             # Short English catalog keywords only; anything else could smuggle text into an API URL.
             if not isinstance(query, str) or not re.fullmatch(r"[A-Za-z0-9 .'-]{0,60}", query.strip()):
@@ -71,10 +69,10 @@ class Classification:
             all_topics = (topic, *topics)
             primary = next((item for item in (Topic.SENSITIVE, Topic.RETURN, Topic.ORDER)
                             if item in all_topics), topic)
-            if value["is_spam"] and any(item != Topic.OTHER for item in all_topics):
+            # Spam stands alone, so a real complaint cannot be hidden behind a spam label.
+            if Topic.SPAM in all_topics and len(all_topics) > 1:
                 raise ValueError
-            return cls(primary, tuple(item for item in all_topics if item != primary), value["is_spam"],
-                       " ".join(query.split()))
+            return cls(primary, tuple(item for item in all_topics if item != primary), " ".join(query.split()))
         except (ValueError, TypeError):
             raise ProviderError("classification_invalid_schema") from None
 

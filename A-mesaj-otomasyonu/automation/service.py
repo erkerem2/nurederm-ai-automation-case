@@ -43,7 +43,7 @@ class MessageService:
             if classification.secondary_topics:
                 ticket = self.add_secondary(ticket, classification.secondary_topics)
             return ProcessResult(self.add_source(ticket), result.error_code)
-        elif classification.is_spam:
+        elif topic == Topic.SPAM:
             ticket = Ticket(message.id, topic, False, "", "İstenmeyen reklam; yanıt üretilmedi, bağlantı açılmadı.")
         elif topic in (Topic.PRODUCT, Topic.PRICE) and classification.product_query and self.products:
             result = self.process_catalog(message, topic, classification.product_query)

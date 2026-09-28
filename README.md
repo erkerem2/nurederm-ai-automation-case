@@ -65,8 +65,11 @@ Outputs in `A-mesaj-otomasyonu/`:
   table); open it directly in a browser.
 - `run_metadata.json`: provider, model, timestamps, input hash, and technical errors.
 
-The delivered sample output uses manually reviewed classifications and a real
-DummyJSON lookup. It is not presented as an OpenAI or Gemini result.
+The delivered sample output uses the coding assistant's own classifications (first
+made with Codex, then independently re-reviewed by Claude Code, which agreed on all 15
+topics) together with real DummyJSON lookups. It is deliberately not the free-tier
+Gemini result: production would use a stronger model, and the Gemini run is kept only
+as live-integration evidence in `A-mesaj-otomasyonu/live_runs/gemini-batch/`.
 
 ## API Configuration
 
@@ -114,6 +117,11 @@ sufficient. A 15-message live run therefore takes at least about 3.5 minutes.
 Both providers load their system instructions from `CLASSIFICATION_PROMPT_PATH`.
 Relative paths are resolved from the repository root, not the shell's working
 directory. An unreadable or empty prompt file stops API mode before any requests.
+The classification prompt is few-shot: one invented example per topic (none taken
+from `mesajlar.json`), including one multi-intent example with a secondary topic.
+The live Gemini verification ran on the previous zero-shot version of the prompt
+(its SHA-256 is in that run's metadata), before `istenmeyen_mesaj` existed, so it labels
+message 7 as `diger` with the old spam flag; the current prompt has not been evaluated live.
 Runtime LLM prompts live in `A-mesaj-otomasyonu/llm_prompts/`, separate from the user prompt history; edits take effect on the next run.
 
 Models are configurable and require access in the corresponding API account.
@@ -137,6 +145,7 @@ The topic names intentionally differ from the supplied brief at the user's reque
 | `siparis-durumu` | `siparis_durumu` |
 | `iade-sikayet` | `iade_sikayet` |
 | `istenmeyen-etki` | `hassas_konu` |
+| — | `istenmeyen_mesaj` (added: ads, follower selling, scams) |
 | `diger` | `diger` |
 
 The output keys remain exactly `id`, `konu`, `devret`, `cevap_taslagi`, and `not`.
@@ -150,8 +159,8 @@ The original `case-brief.md` and `mesajlar.json` are unchanged.
 - A missing cart (HTTP 404) is a normal handoff. Network errors and malformed responses are technical failures and also hand off safely.
 - Message 8 keeps `siparis_durumu` as its main topic and records the additional `fiyat` intent in the note; the unanswered price question causes handoff.
 - Message 12 asks a general shipping-policy question, so it is `diger`. Message 15 asks about product/brand policy, so it is `urun_sorusu`.
-- Product, price, and policy questions hand off because a verified store knowledge source has not been supplied. Bonus product search: for `urun_sorusu` / `fiyat`, the classifier also returns a short English `product_query` (validated as 1-60 keyword characters). The program calls `GET https://dummyjson.com/products/search`, keeps only `beauty`, `skin-care` and `fragrances` items whose title contains every query word (the store search also matches descriptions, e.g. "cream" returns "Ice Cream"), and lists at most three with their API price. The message is still handed off: catalog data never answers suitability, ingredient or policy questions. For the supplied messages (retinol serum, moisturizing cream, vitamin c serum, toner) the test store has no cosmetic match, so the drafts say so instead of suggesting an unrelated product. A catalog failure is reported as a technical error.
-- Spam receives an empty response draft. Links in customer messages are never opened.
+- Product, price, and policy questions hand off because a verified store knowledge source has not been supplied. Bonus product search: for `urun_sorusu` / `fiyat`, the classifier also returns a short English `product_query` (validated as 1-60 keyword characters). The program calls `GET https://dummyjson.com/products/search`, keeps only `beauty`, `skin-care` and `fragrances` items whose title contains every query word (the store search also matches descriptions, e.g. "cream" returns "Ice Cream"), and lists at most three with their API price. The message is still handed off: catalog data never answers suitability, ingredient or policy questions. For the supplied messages (retinol serum, moisturizer, vitamin c serum, toner) the test store has no cosmetic match, so the drafts say so instead of suggesting an unrelated product. A catalog failure is reported as a technical error.
+- `istenmeyen_mesaj` (unsolicited ads and similar; added at the user's request, replacing the earlier `is_spam` flag so the label lives in one place) receives an empty draft and no handoff. It cannot carry secondary topics, so a real complaint cannot be hidden behind a spam label. Links in customer messages are never opened.
 - `manual` accepts only an exact ID/text match from `manual_classifications.json`. A new or edited message is flagged for human review with a technical error, not silently assigned a stored label.
 
 ## Failure Handling
@@ -184,7 +193,7 @@ Temporary test files are created inside the project and removed after testing.
 
 The real DummyJSON sample run processed 15 messages with no technical errors:
 4 `urun_sorusu`, 2 `fiyat`, 5 `siparis_durumu`, 1 `iade_sikayet`, 1 `hassas_konu`,
-and 2 `diger`. Twelve messages were handed off. Messages 2 and 6 had verified order
+1 `istenmeyen_mesaj` (message 7) and 1 `diger`. Twelve messages were handed off. Messages 2 and 6 had verified order
 details, message 1 failed ownership verification, message 3 was not found, and
 message 8 had verified order details plus an unresolved price question.
 
@@ -201,7 +210,8 @@ regenerated. At 12:38 a single batch request on `gemini-2.5-flash-lite` (the pro
 `gemini-3.8-flash` was exhausted) classified all 15 messages with no technical
 errors. Topic and handoff decisions matched the manual reference for 15/15 messages,
 including ownership checks, sensitive handoffs and message 8's secondary price intent;
-extracted product queries matched except "moisturizer cream" vs "moisturizing cream".
+extracted product queries matched except "moisturizer cream" vs "moisturizing cream"
+(the reference now uses "moisturizer").
 The committed evidence is in `A-mesaj-otomasyonu/live_runs/gemini-batch/`.
 `gemini-2.5-flash-lite` is therefore the default Gemini model.
 The delivered main outputs remain the successful manual + live DummyJSON run;

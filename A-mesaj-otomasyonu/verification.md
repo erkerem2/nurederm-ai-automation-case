@@ -27,7 +27,7 @@ These are the committed-ready `talepler.json`, `ozet.txt`, and `run_metadata.jso
 - Messages 2 and 6: matching owner, verified products and totals.
 - Message 3: missing order, clean warning and handoff.
 - Messages 4 and 5: sensitive/return handoff, no diagnosis or recommendation.
-- Message 7: spam, no draft, no link opened.
+- Message 7: `istenmeyen_mesaj` (originally `diger` + spam flag), no draft, no link opened.
 - Message 8: verified order plus an unresolved price question preserved for handoff.
 - Other product/price/policy questions: human handoff due to missing verified knowledge.
 
@@ -91,6 +91,8 @@ without including API credentials or raw provider error bodies.
    11 and 13 (no cosmetic matches). The only difference was the product query for
    message 10 ("moisturizer cream" vs "moisturizing cream"), which does not change
    the outcome. Output: `live_runs/gemini-batch/` (committed as evidence).
+   This run used the zero-shot prompt; the prompt was later changed to few-shot
+   (one invented example per topic) and that version has not been run live.
    This is one successful run on a 15-message sample, not a statistical accuracy
    evaluation.
 

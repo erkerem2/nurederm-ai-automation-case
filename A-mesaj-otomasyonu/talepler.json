@@ -43,7 +43,7 @@
   },
   {
     "id": 7,
-    "konu": "diger",
+    "konu": "istenmeyen_mesaj",
     "devret": false,
     "cevap_taslagi": "",
     "not": "İstenmeyen reklam; yanıt üretilmedi, bağlantı açılmadı. Manuel demo sınıflandırması; çalışma anında LLM kullanılmadı."
@@ -67,7 +67,7 @@
     "konu": "fiyat",
     "devret": true,
     "cevap_taslagi": "Katalogumuzda bu ürünle eşleşen bir kayıt bulamadık. Sizi müşteri temsilcimize yönlendiriyoruz.",
-    "not": "Ürün araması: 'moisturizing cream' için kozmetik kategorisinde eşleşme yok. Ürün uygunluğu, içerik ve güncel fiyat temsilci tarafından teyit edilmeli. Manuel demo sınıflandırması; çalışma anında LLM kullanılmadı."
+    "not": "Ürün araması: 'moisturizer' için kozmetik kategorisinde eşleşme yok. Ürün uygunluğu, içerik ve güncel fiyat temsilci tarafından teyit edilmeli. Manuel demo sınıflandırması; çalışma anında LLM kullanılmadı."
   },
   {
     "id": 11,

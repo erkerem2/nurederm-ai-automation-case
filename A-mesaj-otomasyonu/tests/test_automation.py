@@ -27,8 +27,8 @@ APP_DIR = Path(__file__).resolve().parents[1]
 WORKSPACE = APP_DIR.parent
 
 
-def classification(topic="siparis_durumu", secondary=None, spam=False, query=""):
-    return {"topic": topic, "secondary_topics": secondary or [], "is_spam": spam, "product_query": query}
+def classification(topic="siparis_durumu", secondary=None, query=""):
+    return {"topic": topic, "secondary_topics": secondary or [], "product_query": query}
 
 
 def response(status=200, body=None):
@@ -47,11 +47,11 @@ class ClassificationTests(unittest.TestCase):
         self.assertEqual(result.topic, Topic.SENSITIVE)
         self.assertIn(Topic.ORDER, result.secondary_topics)
         with self.assertRaises(ProviderError):
-            Classification.parse(classification("diger", ["hassas_konu"], True))
+            Classification.parse(classification("istenmeyen_mesaj", ["hassas_konu"]))
 
     def test_invalid_schemas_fail_closed(self):
         for data in [None, [], {}, classification("istenmeyen-etki"),
-                     classification(secondary=["siparis_durumu"]), classification(spam="false"),
+                     classification(secondary=["siparis_durumu"]), {**classification(), "is_spam": True},
                      {**classification(), "draft": "invented"}, classification(secondary=["fiyat", "fiyat"])]:
             with self.subTest(data=data), self.assertRaises(ProviderError):
                 Classification.parse(data)
@@ -63,6 +63,7 @@ class ClassificationTests(unittest.TestCase):
         self.assertEqual(len(topics), 15)
         self.assertEqual(topics.count(Topic.ORDER), 5)
         self.assertEqual(topics[3], Topic.SENSITIVE)
+        self.assertEqual(topics[6], Topic.SPAM)
         self.assertEqual(topics[11], Topic.OTHER)
         with self.assertRaises(ProviderError):
             classifier.classify(Message(1, "whatsapp", 7, "A changed message"))
@@ -264,7 +265,7 @@ class ServiceTests(unittest.TestCase):
         self.assertIn("fiyat", result.ticket.note)
 
     def test_spam_generates_no_reply(self):
-        self.classifier.classify.return_value = Classification(Topic.OTHER, is_spam=True)
+        self.classifier.classify.return_value = Classification.parse(classification("istenmeyen_mesaj"))
         result = self.service.process(self.message)
         self.assertEqual(result.ticket.draft, "")
         self.assertFalse(result.ticket.handoff)

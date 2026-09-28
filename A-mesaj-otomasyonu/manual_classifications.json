@@ -1,20 +1,20 @@
 {
-  "source": "Manually classified by the coding assistant from the supplied case; not an API response or a runtime LLM.",
+  "source": "Classified by the coding assistant (first by Codex, then independently re-reviewed message by message by Claude Code, which agreed on all 15 topics). Used for the delivered output because a stronger model is expected in production than the free-tier Gemini used for live verification. Not an API response or a runtime LLM.",
   "messages": [
-    {"id": 1, "message": "Merhaba, 12 numaralı siparişim nerede? Ne zaman kargoya verilir?", "classification": {"topic": "siparis_durumu", "secondary_topics": [], "is_spam": false, "product_query": ""}},
-    {"id": 2, "message": "5 numaralı siparişimin durumu nedir acaba?", "classification": {"topic": "siparis_durumu", "secondary_topics": [], "is_spam": false, "product_query": ""}},
-    {"id": 3, "message": "9999 numaralı siparişim hâlâ elime ulaşmadı, kontrol eder misiniz?", "classification": {"topic": "siparis_durumu", "secondary_topics": [], "is_spam": false, "product_query": ""}},
-    {"id": 4, "message": "Dün aldığım serumu kullandım, yüzüm yandı ve kızardı. Ne yapmalıyım?", "classification": {"topic": "hassas_konu", "secondary_topics": [], "is_spam": false, "product_query": ""}},
-    {"id": 5, "message": "Kutu ezik geldi, ürünü iade etmek istiyorum.", "classification": {"topic": "iade_sikayet", "secondary_topics": [], "is_spam": false, "product_query": ""}},
-    {"id": 6, "message": "Hi, where is my order #3? It has been a week.", "classification": {"topic": "siparis_durumu", "secondary_topics": [], "is_spam": false, "product_query": ""}},
-    {"id": 7, "message": "Takipçi kasmak ister misiniz? 🔥 %100 organik takipçi: bit.ly/takip-artir", "classification": {"topic": "diger", "secondary_topics": [], "is_spam": true, "product_query": ""}},
-    {"id": 8, "message": "Güneş kreminin fiyatı ne kadar? Bir de 4 numaralı siparişim ne zaman gelir?", "classification": {"topic": "siparis_durumu", "secondary_topics": ["fiyat"], "is_spam": false, "product_query": ""}},
-    {"id": 9, "message": "Retinol serumunuz var mı? Kuru ciltte kullanılır mı?", "classification": {"topic": "urun_sorusu", "secondary_topics": [], "is_spam": false, "product_query": "retinol serum"}},
-    {"id": 10, "message": "Nemlendirici krem ne kadar?", "classification": {"topic": "fiyat", "secondary_topics": [], "is_spam": false, "product_query": "moisturizing cream"}},
-    {"id": 11, "message": "C vitamini serumu hangi cilt tipine uygundur?", "classification": {"topic": "urun_sorusu", "secondary_topics": [], "is_spam": false, "product_query": "vitamin c serum"}},
-    {"id": 12, "message": "Siparişler hangi kargo firmasıyla gönderiliyor?", "classification": {"topic": "diger", "secondary_topics": [], "is_spam": false, "product_query": ""}},
-    {"id": 13, "message": "Tonik 200 ml mi? İçeriğinde alkol var mı?", "classification": {"topic": "urun_sorusu", "secondary_topics": [], "is_spam": false, "product_query": "toner"}},
-    {"id": 14, "message": "İndirim kodunuz var mı, fiyat listesi paylaşır mısınız?", "classification": {"topic": "fiyat", "secondary_topics": [], "is_spam": false, "product_query": ""}},
-    {"id": 15, "message": "Merhaba, ürünleriniz hayvanlar üzerinde test ediliyor mu?", "classification": {"topic": "urun_sorusu", "secondary_topics": [], "is_spam": false, "product_query": ""}}
+    {"id": 1, "message": "Merhaba, 12 numaralı siparişim nerede? Ne zaman kargoya verilir?", "classification": {"topic": "siparis_durumu", "secondary_topics": [], "product_query": ""}},
+    {"id": 2, "message": "5 numaralı siparişimin durumu nedir acaba?", "classification": {"topic": "siparis_durumu", "secondary_topics": [], "product_query": ""}},
+    {"id": 3, "message": "9999 numaralı siparişim hâlâ elime ulaşmadı, kontrol eder misiniz?", "classification": {"topic": "siparis_durumu", "secondary_topics": [], "product_query": ""}},
+    {"id": 4, "message": "Dün aldığım serumu kullandım, yüzüm yandı ve kızardı. Ne yapmalıyım?", "classification": {"topic": "hassas_konu", "secondary_topics": [], "product_query": ""}},
+    {"id": 5, "message": "Kutu ezik geldi, ürünü iade etmek istiyorum.", "classification": {"topic": "iade_sikayet", "secondary_topics": [], "product_query": ""}},
+    {"id": 6, "message": "Hi, where is my order #3? It has been a week.", "classification": {"topic": "siparis_durumu", "secondary_topics": [], "product_query": ""}},
+    {"id": 7, "message": "Takipçi kasmak ister misiniz? 🔥 %100 organik takipçi: bit.ly/takip-artir", "classification": {"topic": "istenmeyen_mesaj", "secondary_topics": [], "product_query": ""}},
+    {"id": 8, "message": "Güneş kreminin fiyatı ne kadar? Bir de 4 numaralı siparişim ne zaman gelir?", "classification": {"topic": "siparis_durumu", "secondary_topics": ["fiyat"], "product_query": ""}},
+    {"id": 9, "message": "Retinol serumunuz var mı? Kuru ciltte kullanılır mı?", "classification": {"topic": "urun_sorusu", "secondary_topics": [], "product_query": "retinol serum"}},
+    {"id": 10, "message": "Nemlendirici krem ne kadar?", "classification": {"topic": "fiyat", "secondary_topics": [], "product_query": "moisturizer"}},
+    {"id": 11, "message": "C vitamini serumu hangi cilt tipine uygundur?", "classification": {"topic": "urun_sorusu", "secondary_topics": [], "product_query": "vitamin c serum"}},
+    {"id": 12, "message": "Siparişler hangi kargo firmasıyla gönderiliyor?", "classification": {"topic": "diger", "secondary_topics": [], "product_query": ""}},
+    {"id": 13, "message": "Tonik 200 ml mi? İçeriğinde alkol var mı?", "classification": {"topic": "urun_sorusu", "secondary_topics": [], "product_query": "toner"}},
+    {"id": 14, "message": "İndirim kodunuz var mı, fiyat listesi paylaşır mısınız?", "classification": {"topic": "fiyat", "secondary_topics": [], "product_query": ""}},
+    {"id": 15, "message": "Merhaba, ürünleriniz hayvanlar üzerinde test ediliyor mu?", "classification": {"topic": "urun_sorusu", "secondary_topics": [], "product_query": ""}}
   ]
 }
