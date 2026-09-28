@@ -27,6 +27,28 @@ node B-n8n/tests/verify_workflow.mjs                                            
 - **B:** n8n şablonu [#4640](https://n8n.io/workflows/4640-competitor-price-monitoring-with-web-scrapinggoogle-sheets-and-telegram/) temel alındı. Akış tüm sayfaları geziyor, fiyatı sayı olarak Google Sheets'e tarih damgasıyla yazıyor, değişiklikleri Telegram'a bildiriyor ve bir hata dalı içeriyor. Ayrıntılar [B-n8n/akis-aciklama.md](B-n8n/akis-aciklama.md) dosyasında.
 - **Test:** 45 birim testi (7'si prompt injection) her push'ta GitHub Actions'ta ağsız çalışıyor. Gerçek API ile sızıntı kontrolü `tests/live_acceptance.py` içinde.
 
+**Devir kararı nasıl veriliyor:** Model yalnızca konuyu seçiyor; `devret` kararını ve cevap taslağını kod veriyor.
+Temel kural şu: **doğrulanmış bir kaynaktan cevap verilemiyorsa mesaj temsilciye devredilir.**
+Mesajda birden fazla niyet varsa öncelik sırası `hassas_konu` > `iade_sikayet` > `siparis_durumu`. Model hassas konuyu
+ek konu olarak işaretlese bile ana konu yapılır. Model şema dışı bir çıktı verirse (kendi yazdığı bir cevap, bilinmeyen bir konu, spam
+etiketi arkasına gizlenmiş bir şikâyet gibi) çıktı geçersiz sayılır ve mesaj devredilir.
+
+| Durum | Devret | Neden |
+| --- | --- | --- |
+| `hassas_konu`, `iade_sikayet` | Her zaman | Brief kuralı; teşhis, tedavi veya ürün önerisi üretilmez |
+| `siparis_durumu`, `userId` = `musteri_id` | Hayır | Ürünler ve tutar API'den doğrulanmış olarak gelir |
+| `siparis_durumu`, sahiplik eşleşmiyor | Evet | Başka müşterinin sipariş bilgisi verilmez |
+| `siparis_durumu`, sipariş bulunamadı, numara yok veya birden fazla numara var | Evet | Tahmin yapılmaz; not-found durumunda uyarı mesajı üretilir |
+| `urun_sorusu`, `fiyat`, `diger` | Evet | Doğrulanmış ürün, fiyat veya politika kaynağı yok; katalogda ürün bulunsa bile uygunluk ve içerik sorusu cevaplanmaz |
+| `istenmeyen_mesaj` | Hayır | Yanıt üretilmez, linkler açılmaz, temsilcinin vakti alınmaz |
+| Ek konusu olan mesaj | Evet | Taslak yalnızca ana soruyu cevaplar; ek soru cevapsız kalmasın diye |
+| Teknik hata (API, zaman aşımı, bozuk veri) | Evet | Sessizce "başarılı" sayılmaz; çıkış kodu 2 döner |
+
+Sonuç olarak 15 mesajdan 3'ü otomatik cevaplanıyor: 2 ve 6 numaralı doğrulanmış siparişler ile 7 numaralı istenmeyen mesaj. Kalan 12 mesaj
+devrediliyor. Oranın yüksek olmasının sebebi hassas konular değil, güvenilir bir mağaza bilgi kaynağının olmaması; bu bilinçli bir tercih.
+Production'da devir oranını düşürmenin yolu modeli serbest bırakmak değil, doğrulanmış kaynaklar (katalog, fiyat listesi,
+kargo ve iade politikası) eklemektir.
+
 **Nerede takıldık:**
 - Gemini free tier kotası (20 istek/gün): tek istekli batch moduna ve `gemini-2.5-flash-lite` modeline geçerek aşıldı.
 - OpenAI anahtarı yoktu.
