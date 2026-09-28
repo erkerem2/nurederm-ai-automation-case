@@ -49,6 +49,12 @@
       "phase": "proje-sonu",
       "role": "user",
       "content": "Bir de committen önce şunu ekle bitirdiğimiz saati zorunlulukların bittiği saat olarka düzelt 13.35'i de testler ve eklemelerin bittiği saat olarak ekle sonra bana revize ettğin commit'i ver"
+    },
+    {
+      "sequence": 27,
+      "phase": "proje-sonu",
+      "role": "user",
+      "content": "şimdi son olarka her şeyi bütün bir kontrol et detaya in sonra teslim edeceğim tamam ise"
     }
   ]
 }

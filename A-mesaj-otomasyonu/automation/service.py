@@ -99,13 +99,13 @@ class MessageService:
         if not matches:
             return ProcessResult(Ticket(
                 message.id, topic, True,
-                "Katalogumuzda bu ürünle eşleşen bir kayıt bulamadık. Sizi müşteri temsilcimize yönlendiriyoruz.",
+                "Kataloğumuzda bu ürünle eşleşen bir kayıt bulamadık. Sizi müşteri temsilcimize yönlendiriyoruz.",
                 f"Ürün araması: '{query}' için kozmetik kategorisinde eşleşme yok. {handoff_note}",
             ))
         listed = ", ".join(f"{title} (fiyat: {price})" for title, price in matches)
         return ProcessResult(Ticket(
             message.id, topic, True,
-            f"Katalogumuzda bulunan ilgili ürünler: {listed}. Fiyatlar test API'sinden alınmıştır, para birimi belirtilmemiştir. "
+            f"Kataloğumuzda bulunan ilgili ürünler: {listed}. Fiyatlar test API'sinden alınmıştır, para birimi belirtilmemiştir. "
             "Sorunuzun ayrıntıları için sizi müşteri temsilcimize yönlendiriyoruz.",
             f"Ürün araması: '{query}' için {len(matches)} eşleşme taslağa eklendi. {handoff_note}",
         ))
