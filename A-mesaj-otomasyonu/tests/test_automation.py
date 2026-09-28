@@ -2,6 +2,7 @@ import argparse
 from contextlib import redirect_stdout
 from copy import deepcopy
 import io
+import hashlib
 import json
 import math
 import os
@@ -12,7 +13,7 @@ from unittest.mock import Mock, patch
 
 import requests
 
-from automation.classifiers import GeminiClassifier, ManualClassifier, OpenAIClassifier, SCHEMA
+from automation.classifiers import GeminiClassifier, ManualClassifier, OpenAIClassifier, SCHEMA, load_prompt
 from automation.domain import Classification, ConfigurationError, InputError, Message, ProviderError, Topic, load_messages
 from automation.http_client import HttpError, JsonClient
 from automation.orders import OrderClient, extract_order_ids
@@ -71,15 +72,17 @@ class ProviderTests(unittest.TestCase):
     def setUp(self):
         self.client = Mock()
         self.message = Message(6, "instagram", 3, "Hi, where is my order #3?")
+        self.prompt = load_prompt(WORKSPACE / "prompts" / "classift_prompt.txt")
 
     def test_openai_chat_completions_contract(self):
         self.client.request.return_value = {"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(classification())}}]}
-        result = OpenAIClassifier(self.client, "test-key", "test-model").classify(self.message)
+        result = OpenAIClassifier(self.client, "test-key", "test-model", self.prompt).classify(self.message)
         self.assertEqual(result.topic, Topic.ORDER)
         args, kwargs = self.client.request.call_args
         self.assertEqual(args, ("POST", "https://api.openai.com/v1/chat/completions"))
         self.assertEqual(kwargs["headers"], {"Authorization": "Bearer test-key"})
         body = kwargs["payload"]
+        self.assertEqual(body["messages"][0]["content"], self.prompt)
         self.assertEqual(body["response_format"]["json_schema"]["schema"], SCHEMA)
         self.assertTrue(body["response_format"]["json_schema"]["strict"])
         self.assertFalse(body["store"])
@@ -90,13 +93,36 @@ class ProviderTests(unittest.TestCase):
         self.client.request.return_value = {"candidates": [{"finishReason": "STOP", "content": {"parts": [
             {"text": "private reasoning", "thought": True}, {"text": json.dumps(classification())}
         ]}}]}
-        result = GeminiClassifier(self.client, "test-key", "test-model").classify(self.message)
+        result = GeminiClassifier(self.client, "test-key", "test-model", self.prompt).classify(self.message)
         self.assertEqual(result.topic, Topic.ORDER)
         args, kwargs = self.client.request.call_args
         self.assertEqual(args[1], "https://generativelanguage.googleapis.com/v1beta/models/test-model:generateContent")
         self.assertNotIn("test-key", args[1])
         self.assertEqual(kwargs["headers"], {"x-goog-api-key": "test-key"})
-        self.assertEqual(kwargs["payload"]["generationConfig"]["responseFormat"]["text"]["schema"], SCHEMA)
+        self.assertEqual(kwargs["payload"]["systemInstruction"]["parts"][0]["text"], self.prompt)
+        self.assertEqual(kwargs["payload"]["generationConfig"], {
+            "responseMimeType": "application/json", "responseJsonSchema": SCHEMA,
+        })
+
+    def test_permanent_provider_error_stops_repeated_requests(self):
+        for code in ("http_401", "http_429_daily_quota"):
+            with self.subTest(code=code):
+                self.client.request.reset_mock()
+                self.client.request.side_effect = HttpError(code)
+                classifier = GeminiClassifier(self.client, "test-key", "test-model", self.prompt)
+                for _ in range(3):
+                    with self.assertRaises(ProviderError):
+                        classifier.classify(self.message)
+                self.client.request.assert_called_once()
+
+    def test_provider_requests_respect_configured_interval(self):
+        self.client.request.return_value = {"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(classification())}}]}
+        sleep = Mock()
+        clock = Mock(side_effect=[100, 100, 102, 115])
+        classifier = OpenAIClassifier(self.client, "test-key", "test-model", self.prompt, min_interval=15, clock=clock, sleep=sleep)
+        classifier.classify(self.message)
+        classifier.classify(self.message)
+        sleep.assert_called_once_with(13)
 
     def test_refusal_truncation_invalid_json_and_missing_candidates_fail(self):
         bad_openai = [
@@ -108,19 +134,33 @@ class ProviderTests(unittest.TestCase):
         for payload in bad_openai:
             with self.subTest(payload=payload), self.assertRaises(ProviderError):
                 self.client.request.return_value = payload
-                OpenAIClassifier(self.client, "test-key", "test-model").classify(self.message)
+                OpenAIClassifier(self.client, "test-key", "test-model", self.prompt).classify(self.message)
         for payload in [{}, {"candidates": []}, {"candidates": [{"finishReason": "SAFETY"}]}]:
             with self.subTest(payload=payload), self.assertRaises(ProviderError):
                 self.client.request.return_value = payload
-                GeminiClassifier(self.client, "test-key", "test-model").classify(self.message)
+                GeminiClassifier(self.client, "test-key", "test-model", self.prompt).classify(self.message)
 
     def test_keys_required_and_model_path_not_injectable(self):
         for factory in (OpenAIClassifier, GeminiClassifier):
             with self.assertRaises(ConfigurationError):
-                factory(self.client, "", "model")
+                factory(self.client, "", "model", self.prompt)
             with self.assertRaises(ConfigurationError):
-                factory(self.client, "key", "model?key=secret")
+                factory(self.client, "key", "model?key=secret", self.prompt)
         self.client.request.assert_not_called()
+
+    def test_prompt_file_missing_or_empty_is_configuration_failure(self):
+        with tempfile.TemporaryDirectory(dir=APP_DIR) as folder:
+            path = Path(folder) / "prompt.txt"
+            with self.assertRaises(ConfigurationError):
+                load_prompt(path)
+            path.write_text(" \n", encoding="utf-8")
+            with self.assertRaises(ConfigurationError):
+                load_prompt(path)
+            path.write_text("Custom classification instructions.", encoding="utf-8")
+            custom_prompt = load_prompt(path)
+            self.client.request.return_value = {"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(classification())}}]}
+            OpenAIClassifier(self.client, "key", "model", custom_prompt).classify(self.message)
+            self.assertEqual(self.client.request.call_args.kwargs["payload"]["messages"][0]["content"], custom_prompt)
 
 
 class ServiceTests(unittest.TestCase):
@@ -216,6 +256,18 @@ class ServiceTests(unittest.TestCase):
 
 
 class TransportTests(unittest.TestCase):
+    def test_daily_quota_failure_is_not_retried(self):
+        session, sleep = Mock(), Mock()
+        session.request.return_value = response(429, {"error": {"details": [{
+            "@type": "type.googleapis.com/google.rpc.QuotaFailure",
+            "violations": [{"quotaId": "GenerateRequestsPerDayPerProjectPerModel-FreeTier", "quotaValue": "20"}],
+        }]}})
+        with self.assertRaises(HttpError) as caught:
+            JsonClient(session=session, sleep=sleep).request("POST", "https://example.com")
+        self.assertEqual(str(caught.exception), "http_429_daily_quota")
+        session.request.assert_called_once()
+        sleep.assert_not_called()
+
     def test_retry_is_bounded_and_404_is_not_retried(self):
         session, sleep = Mock(), Mock()
         session.request.side_effect = [response(429), response(503), response(200, {"ok": True})]
@@ -262,6 +314,30 @@ class TransportTests(unittest.TestCase):
 
 
 class InputAndRunTests(unittest.TestCase):
+    def test_api_run_uses_configured_external_prompt(self):
+        with tempfile.TemporaryDirectory(dir=APP_DIR) as folder:
+            target = Path(folder)
+            prompt_path = target / "custom-prompt.txt"
+            prompt_text = "Custom instructions loaded through the environment path."
+            prompt_path.write_text(prompt_text, encoding="utf-8")
+            seen_prompts = []
+
+            def fetch(classifier, text):
+                seen_prompts.append(classifier.system_prompt)
+                return json.dumps(classification("diger"))
+
+            with patch.dict(os.environ, {
+                "GEMINI_API_KEY": "test-key", "GEMINI_MODEL": "test-model",
+                "CLASSIFICATION_PROMPT_PATH": str(prompt_path.relative_to(WORKSPACE)),
+                "LLM_MIN_INTERVAL_SECONDS": "0",
+            }), patch.object(GeminiClassifier, "fetch", autospec=True, side_effect=fetch), \
+                    redirect_stdout(io.StringIO()), patch("sys.stderr", new=io.StringIO()):
+                args = argparse.Namespace(provider="gemini", input=WORKSPACE / "mesajlar.json", output_dir=target)
+                self.assertEqual(main.run(args), 0)
+            self.assertEqual(seen_prompts, [prompt_text] * 15)
+            metadata = json.loads((target / "run_metadata.json").read_text())
+            self.assertEqual(metadata["classification_prompt_sha256"], hashlib.sha256(prompt_text.encode()).hexdigest())
+
     def test_order_number_patterns_ignore_prices_and_sizes(self):
         for text, expected in [
             ("12 numaralı siparişim", [12]), ("Sipariş no: 5", [5]),

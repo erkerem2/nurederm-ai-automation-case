@@ -32,6 +32,8 @@ class JsonClient:
                 raise HttpError("request_failed") from None
             if response.status_code == 404 and allow_not_found:
                 return None
+            if response.status_code == 429 and self.is_daily_quota_exhausted(response):
+                raise HttpError("http_429_daily_quota")
             if response.status_code == 429 or 500 <= response.status_code <= 599:
                 if attempt < self.retries:
                     delay = 2 ** attempt
@@ -51,6 +53,20 @@ class JsonClient:
                 raise HttpError("response_invalid_object")
             return data
         raise HttpError("request_failed")
+
+    @staticmethod
+    def is_daily_quota_exhausted(response) -> bool:
+        try:
+            data = response.json()
+            details = data.get("error", {}).get("details", [])
+            return any(
+                detail.get("@type") == "type.googleapis.com/google.rpc.QuotaFailure"
+                and any("perday" in str(item.get("quotaId", "")).lower()
+                        for item in detail.get("violations", []))
+                for detail in details
+            )
+        except (ValueError, TypeError, AttributeError):
+            return False
 
     def close(self):
         self.session.close()

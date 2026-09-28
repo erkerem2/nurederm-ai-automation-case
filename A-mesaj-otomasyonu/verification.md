@@ -1,0 +1,76 @@
+# Part A Verification
+
+Date: 2026-09-28. Times below are Europe/Istanbul (UTC+03:00).
+
+## Automated Tests
+
+30 offline tests passed with Python 3.12.10. All automated test network calls are
+mocked; they do not prove live provider availability or general model accuracy.
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s A-mesaj-otomasyonu -p "test_*.py" -v
+```
+
+Coverage includes cross-customer data leakage, sensitive-topic priority and
+handoff, missing and ambiguous order numbers, malformed cart data, provider
+refusals and invalid JSON, retry limits, request pacing, permanent provider
+failures, daily quota exhaustion, external prompt loading and hash provenance,
+input validation, output schema, and nonzero exit status on technical failures.
+
+## Successful Case Run
+
+At 11:32, manual classification of the supplied messages plus actual DummyJSON
+requests produced 15 tickets, 12 human handoffs, and zero technical errors.
+These are the committed-ready `talepler.json`, `ozet.txt`, and `run_metadata.json`.
+
+- Message 1: owner mismatch, no order details exposed.
+- Messages 2 and 6: matching owner, verified products and totals.
+- Message 3: missing order, clean warning and handoff.
+- Messages 4 and 5: sensitive/return handoff, no diagnosis or recommendation.
+- Message 7: spam, no draft, no link opened.
+- Message 8: verified order plus an unresolved price question preserved for handoff.
+- Other product/price/policy questions: human handoff due to missing verified knowledge.
+
+## Live Gemini Attempts
+
+1. At 11:35, the first request format returned HTTP 400. The API rejected the new
+   `responseFormat.text.mimeType` value. The adapter was changed to the supported
+   `responseMimeType` + `responseJsonSchema` configuration.
+2. The next request revealed that `gemini-2.5-flash` was unavailable to this new
+   account. The API recommended `gemini-3.8-flash`; configuration was updated.
+3. At 11:37-11:38, the unpaced 15-message run successfully classified messages
+   1, 2, 3, 4, 5, and 15. Nine messages received HTTP 429. The successful messages
+   matched the manual topic reference, including the sensitive/return cases and
+   the ownership-protected order case. This was a degraded run, not a full pass.
+4. A paced attempt was interrupted by the connection loss and left no completed
+   output. It is not counted as a successful test.
+5. At 11:43-11:46, the external-prompt run used `gemini-3.8-flash` and a 15-second
+   minimum interval. Messages 1 and 3 were successfully classified; message 2
+   received HTTP 503; messages 4-15 received HTTP 429. The output status is
+   `degraded`. A sanitized diagnostic then identified the quota as
+   `GenerateRequestsPerDayPerProjectPerModel-FreeTier`, value `20`.
+6. After discovering the daily limit, the transport was changed to recognize
+   structured `google.rpc.QuotaFailure` details and stop retrying a daily quota
+   failure. The classifier stops remaining provider calls for that run and creates
+   explicit human-review tickets. Offline tests cover this change; no further
+   live requests were made after daily quota exhaustion was confirmed.
+
+The final live run's prompt SHA-256 was:
+`cf4270c3bae7d9d3366e18d9b07cf6ecb40b00a455b38b581d7c59d5ca07baaa`.
+Its input SHA-256 was:
+`e431d6ea36046f284ffa1dfc44904398423d30faf6a90553684a534b738c553a`.
+
+Local diagnostic output files are in the ignored `runs/gemini/` and
+`runs/gemini-paced/` directories. This report retains their relevant results
+without including API credentials or raw provider error bodies.
+
+## Outstanding Verification
+
+- A complete 15-message Gemini acceptance run still needs an available quota.
+- OpenAI live verification still needs an OpenAI API key.
+- Runtime prompts are editable through `CLASSIFICATION_PROMPT_PATH`; future
+  prompt/model changes need a fresh evaluation.
+- Part B is not implemented yet and awaits the agreed Part A review checkpoint.
+
+No commits or pushes were performed by the coding assistant. The original
+`case-brief.md` and `mesajlar.json` were not modified.

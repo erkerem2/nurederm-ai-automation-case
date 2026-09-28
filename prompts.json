@@ -43,6 +43,30 @@
       "phase": "A",
       "role": "user",
       "content": "Gemini api key'i oluşturup ekledim onun testlerini de A aşamasının en sonunda yapacağız. Ve ilk commiti de gerçekleştirdim."
+    },
+    {
+      "sequence": 8,
+      "phase": "A",
+      "role": "user",
+      "content": "Az önce bağlantı koptu kaldığın yerden devam et ve buna ek olarak Gemini veya openai'a classify için verdiğin promptu dosya içine değil harici bir variable olarak bağlayalım. enviroment içine dosya yolu olarak koy ve \"classift\\\\\\_prompt.txt\" olarak text dosyasından alsın ve bunu prompts diye ayrı bir dosyanın içine koy ileride başka şeyler eklenecek olursa tüm promptlar bir arada dursun."
+    },
+    {
+      "sequence": 9,
+      "phase": "A",
+      "role": "user",
+      "content": "Bir de öncelikli olarak: bana bir dosya çıkart, içine yapılanlar ve yapılması planlananları detaylı bir şekilde yaz ve bunu gitignore'a da ekle pushlamayalım benim için o dosya"
+    },
+    {
+      "sequence": 10,
+      "phase": "A",
+      "role": "user",
+      "content": "Bölüm A durum raporu ver şimdi kısa ve öz olarak"
+    },
+    {
+      "sequence": 11,
+      "phase": "A",
+      "role": "user",
+      "content": "Bir de Commit önerisi ver "
     }
   ]
 }

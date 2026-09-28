@@ -47,9 +47,11 @@ CLASSIFIER_PROVIDER=manual
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.8-flash
 HTTP_TIMEOUT_SECONDS=20
 HTTP_MAX_RETRIES=2
+LLM_MIN_INTERVAL_SECONDS=15
+CLASSIFICATION_PROMPT_PATH=prompts/classift_prompt.txt
 ```
 
 Fill the key for the chosen provider. Either set `CLASSIFIER_PROVIDER` to `openai`
@@ -65,6 +67,13 @@ submitted demo outputs. Provider selection is explicit; entering a key alone doe
 not switch modes. Only the selected provider receives the message text. Customer
 IDs, channel metadata, and fetched carts are not added to the classification prompt.
 Environment variables already set by the process take precedence over `.env`.
+`LLM_MIN_INTERVAL_SECONDS` spaces requests for low-quota accounts; the example
+uses 15 seconds. This is configurable, not a guarantee that any account quota is
+sufficient. A 15-message live run therefore takes at least about 3.5 minutes.
+Both providers load their system instructions from `CLASSIFICATION_PROMPT_PATH`.
+Relative paths are resolved from the repository root, not the shell's working
+directory. An unreadable or empty prompt file stops API mode before any requests.
+Runtime prompts live together in `prompts/`; edits take effect on the next run.
 
 Models are configurable and require access in the corresponding API account.
 Both adapters request structured JSON and validate the result locally. OpenAI
@@ -108,6 +117,9 @@ The original `case-brief.md` and `mesajlar.json` are unchanged.
 
 HTTP requests use connection/read timeouts and bounded retries for connection
 failures, timeouts, HTTP 429, and HTTP 5xx. Authentication failures are not retried.
+Permanent provider errors (400, 401, 403, 404) and an explicitly reported daily
+Gemini quota exhaustion stop further provider requests for
+that run; remaining messages receive explicit failure handoffs.
 Redirects are disabled. Logs and ticket notes exclude raw provider errors, HTTP
 headers, and authentication values. Output files are replaced atomically per file.
 
@@ -135,9 +147,15 @@ and 2 `diger`. Twelve messages were handed off. Messages 2 and 6 had verified or
 details, message 1 failed ownership verification, message 3 was not found, and
 message 8 had verified order details plus an unresolved price question.
 
-OpenAI and Gemini requests have been checked with offline contract tests, not
-live account calls: API keys were unavailable during initial implementation.
-Classification accuracy with each chosen model still needs a live evaluation.
+Thirty offline tests pass. OpenAI has only been checked with contract tests because
+no OpenAI key was supplied. Gemini was also called live after its key was added:
+six messages succeeded in the initial unpaced run, but a full 15-message acceptance
+run could not be completed. A subsequent run using the external prompt file had
+two successful classifications, one HTTP 503, and twelve HTTP 429 errors. The API
+then explicitly reported an exhausted free-tier limit of 20 requests/day for this
+project/model. See `A-mesaj-otomasyonu/verification.md` for the attempt history.
+The delivered main outputs remain the successful manual + live DummyJSON run;
+failed Gemini results are not substituted or described as successful.
 
 ## Deployment Boundary
 
@@ -157,12 +175,13 @@ classification can still be wrong even when its output matches the JSON schema.
 `prompts.json` is the canonical ordered record of user-authored prompts from the
 start of this conversation, including corrections. Original message timestamps
 are unavailable and have not been fabricated. System/environment messages are
-excluded. Runtime classification instructions live in
-`A-mesaj-otomasyonu/automation/classifiers.py` as `SYSTEM_PROMPT`.
+excluded. Runtime classification instructions live in `prompts/classift_prompt.txt`
+and are selected through `CLASSIFICATION_PROMPT_PATH` in `.env`. Run metadata
+records the loaded prompt's SHA-256 hash without copying its content.
 
 - [OpenAI structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs)
 - [OpenAI GPT-4.1 mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini)
 - [Gemini generateContent structured output](https://ai.google.dev/gemini-api/docs/generate-content/structured-output?hl=en)
-- [Gemini 2.5 Flash](https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash)
+- [Gemini 3.8 Flash](https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash)
 
 Git commits, pushes, repository publication, and submission are handled by the user.

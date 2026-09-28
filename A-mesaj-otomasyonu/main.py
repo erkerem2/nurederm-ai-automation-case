@@ -11,7 +11,7 @@ import tempfile
 
 from dotenv import load_dotenv
 
-from automation.classifiers import GeminiClassifier, ManualClassifier, OpenAIClassifier
+from automation.classifiers import GeminiClassifier, ManualClassifier, OpenAIClassifier, load_prompt
 from automation.domain import AutomationError, ConfigurationError, Topic, load_messages
 from automation.http_client import JsonClient
 from automation.orders import OrderClient
@@ -51,23 +51,35 @@ def run(args) -> int:
     try:
         timeout = float(os.getenv("HTTP_TIMEOUT_SECONDS", "20"))
         retries = int(os.getenv("HTTP_MAX_RETRIES", "2"))
+        min_interval = float(os.getenv("LLM_MIN_INTERVAL_SECONDS", "0"))
         if not math.isfinite(timeout) or not 1 <= timeout <= 120 or not 0 <= retries <= 3:
+            raise ValueError
+        if not math.isfinite(min_interval) or not 0 <= min_interval <= 60:
             raise ValueError
     except ValueError:
         raise ConfigurationError("http_configuration_invalid") from None
     messages = load_messages(args.input)
     client = JsonClient(timeout, retries)
     started_at = datetime.now(timezone.utc).isoformat()
+    prompt_hash = None
     try:
         if provider == "manual":
             classifier = ManualClassifier(APP_DIR / "manual_classifications.json")
         else:
             factory = OpenAIClassifier if provider == "openai" else GeminiClassifier
-            default_model = "gpt-4.1-mini" if provider == "openai" else "gemini-2.5-flash"
+            default_model = "gpt-4.1-mini" if provider == "openai" else "gemini-3.8-flash"
+            prompt_path = Path(os.getenv("CLASSIFICATION_PROMPT_PATH", "prompts/classift_prompt.txt"))
+            system_prompt = load_prompt(prompt_path if prompt_path.is_absolute() else ROOT / prompt_path)
+            prompt_hash = hashlib.sha256(system_prompt.encode("utf-8")).hexdigest()
             classifier = factory(client, os.getenv(f"{provider.upper()}_API_KEY", ""),
-                                 os.getenv(f"{provider.upper()}_MODEL", default_model))
+                                 os.getenv(f"{provider.upper()}_MODEL", default_model),
+                                 system_prompt=system_prompt, min_interval=min_interval)
         service = MessageService(classifier, OrderClient(client))
-        results = [service.process(message) for message in messages]
+        results = []
+        for index, message in enumerate(messages, start=1):
+            results.append(service.process(message))
+            if provider != "manual":
+                print(f"İşlenen mesaj: {index}/{len(messages)}", file=sys.stderr, flush=True)
     finally:
         client.close()
     tickets = [result.ticket.to_dict() for result in results]
@@ -83,6 +95,8 @@ def run(args) -> int:
     metadata = {
         "started_at": started_at, "finished_at": datetime.now(timezone.utc).isoformat(),
         "provider": provider, "model": classifier.model,
+        "min_interval_seconds": min_interval if provider != "manual" else 0,
+        "classification_prompt_sha256": prompt_hash,
         "input_sha256": hashlib.sha256(args.input.read_bytes()).hexdigest(),
         "message_count": len(tickets), "technical_errors": errors,
         "status": "degraded" if errors else "completed", "order_source": "https://dummyjson.com",
