@@ -13,7 +13,7 @@ from unittest.mock import Mock, patch
 
 import requests
 
-from automation.classifiers import GeminiClassifier, ManualClassifier, OpenAIClassifier, SCHEMA, load_prompt
+from automation.classifiers import BatchClassifier, GeminiClassifier, ManualClassifier, OpenAIClassifier, SCHEMA, load_prompt
 from automation.domain import Classification, ConfigurationError, InputError, Message, ProviderError, Topic, load_messages
 from automation.http_client import HttpError, JsonClient
 from automation.orders import OrderClient, extract_order_ids
@@ -72,7 +72,7 @@ class ProviderTests(unittest.TestCase):
     def setUp(self):
         self.client = Mock()
         self.message = Message(6, "instagram", 3, "Hi, where is my order #3?")
-        self.prompt = load_prompt(WORKSPACE / "prompts" / "classift_prompt.txt")
+        self.prompt = load_prompt(WORKSPACE / "prompts" / "classify_prompt.txt")
 
     def test_openai_chat_completions_contract(self):
         self.client.request.return_value = {"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(classification())}}]}
@@ -88,6 +88,27 @@ class ProviderTests(unittest.TestCase):
         self.assertFalse(body["store"])
         user_data = json.loads(body["messages"][1]["content"])
         self.assertEqual(user_data, {"customer_message": self.message.text})
+
+    def test_batch_uses_one_request_and_maps_by_id(self):
+        messages = [self.message, Message(99, "whatsapp", 1, "Fiyat nedir?")]
+        payload = {"results": [{"id": 99, "classification": classification("fiyat")},
+                               {"id": 6, "classification": classification()}]}
+        self.client.request.return_value = {"candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": json.dumps(payload)}]}}]}
+        provider = GeminiClassifier(self.client, "test-key", "test-model", self.prompt)
+        batch = BatchClassifier(provider, messages)
+        self.assertEqual(batch.classify(messages[0]).topic, Topic.ORDER)
+        self.assertEqual(batch.classify(messages[1]).topic, Topic.PRICE)
+        self.client.request.assert_called_once()
+        user_data = json.loads(self.client.request.call_args.kwargs["payload"]["contents"][0]["parts"][0]["text"])
+        self.assertEqual(set(user_data["customer_messages"][0]), {"id", "message"})
+
+    def test_batch_rejects_missing_duplicate_and_foreign_ids(self):
+        provider = GeminiClassifier(self.client, "test-key", "test-model", self.prompt)
+        for ids in ([], [6, 6], [99]):
+            payload = {"results": [{"id": item_id, "classification": classification()} for item_id in ids]}
+            self.client.request.return_value = {"candidates": [{"finishReason": "STOP", "content": {"parts": [{"text": json.dumps(payload)}]}}]}
+            with self.subTest(ids=ids), self.assertRaises(ProviderError):
+                BatchClassifier(provider, [self.message]).classify(self.message)
 
     def test_gemini_contract_and_thought_exclusion(self):
         self.client.request.return_value = {"candidates": [{"finishReason": "STOP", "content": {"parts": [

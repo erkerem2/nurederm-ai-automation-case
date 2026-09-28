@@ -64,13 +64,23 @@ Local diagnostic output files are in the ignored `runs/gemini/` and
 `runs/gemini-paced/` directories. This report retains their relevant results
 without including API credentials or raw provider error bodies.
 
+7. To keep free-tier usage minimal, a batch mode was added: all 15 messages are
+   classified in one request (`--batch`) with retries disabled (`--max-retries 0`).
+   The response must contain exactly one valid classification per supplied ID.
+   Two single-request batch attempts (12:03 and 12:11) both returned HTTP 401:
+   the configured key was rejected. The key in `.env` had not been changed since
+   11:43, although the user had regenerated it, so the likely cause is a revoked
+   key rather than a code change. The batch run's local output is in the ignored
+   `runs/gemini-batch/` directory; its prompt SHA-256 differs because the batch
+   instructions were appended to the prompt file.
+
 ## Outstanding Verification
 
 - A complete 15-message Gemini acceptance run still needs an available quota.
 - OpenAI live verification still needs an OpenAI API key.
 - Runtime prompts are editable through `CLASSIFICATION_PROMPT_PATH`; future
   prompt/model changes need a fresh evaluation.
-- Part B is not implemented yet and awaits the agreed Part A review checkpoint.
+- A live batch run with a valid Gemini key has not succeeded yet.
 
 No commits or pushes were performed by the coding assistant. The original
 `case-brief.md` and `mesajlar.json` were not modified.

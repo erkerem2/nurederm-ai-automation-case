@@ -11,7 +11,7 @@ import tempfile
 
 from dotenv import load_dotenv
 
-from automation.classifiers import GeminiClassifier, ManualClassifier, OpenAIClassifier, load_prompt
+from automation.classifiers import BatchClassifier, GeminiClassifier, ManualClassifier, OpenAIClassifier, load_prompt
 from automation.domain import AutomationError, ConfigurationError, Topic, load_messages
 from automation.http_client import JsonClient
 from automation.orders import OrderClient
@@ -40,6 +40,8 @@ def build_parser():
     parser.add_argument("--provider", choices=("manual", "openai", "gemini"), help="Overrides CLASSIFIER_PROVIDER in .env")
     parser.add_argument("--input", type=Path, default=ROOT / "mesajlar.json")
     parser.add_argument("--output-dir", type=Path, default=APP_DIR)
+    parser.add_argument("--batch", action="store_true", help="Classify up to 50 messages in one API request")
+    parser.add_argument("--max-retries", type=int, help="Override HTTP_MAX_RETRIES; use 0 for a one-attempt quota check")
     return parser
 
 
@@ -51,6 +53,8 @@ def run(args) -> int:
     try:
         timeout = float(os.getenv("HTTP_TIMEOUT_SECONDS", "20"))
         retries = int(os.getenv("HTTP_MAX_RETRIES", "2"))
+        if getattr(args, "max_retries", None) is not None:
+            retries = args.max_retries
         min_interval = float(os.getenv("LLM_MIN_INTERVAL_SECONDS", "0"))
         if not math.isfinite(timeout) or not 1 <= timeout <= 120 or not 0 <= retries <= 3:
             raise ValueError
@@ -68,12 +72,14 @@ def run(args) -> int:
         else:
             factory = OpenAIClassifier if provider == "openai" else GeminiClassifier
             default_model = "gpt-4.1-mini" if provider == "openai" else "gemini-3.8-flash"
-            prompt_path = Path(os.getenv("CLASSIFICATION_PROMPT_PATH", "prompts/classift_prompt.txt"))
+            prompt_path = Path(os.getenv("CLASSIFICATION_PROMPT_PATH", "prompts/classify_prompt.txt"))
             system_prompt = load_prompt(prompt_path if prompt_path.is_absolute() else ROOT / prompt_path)
             prompt_hash = hashlib.sha256(system_prompt.encode("utf-8")).hexdigest()
             classifier = factory(client, os.getenv(f"{provider.upper()}_API_KEY", ""),
                                  os.getenv(f"{provider.upper()}_MODEL", default_model),
                                  system_prompt=system_prompt, min_interval=min_interval)
+            if getattr(args, "batch", False):
+                classifier = BatchClassifier(classifier, messages)
         service = MessageService(classifier, OrderClient(client))
         results = []
         for index, message in enumerate(messages, start=1):
@@ -95,6 +101,8 @@ def run(args) -> int:
     metadata = {
         "started_at": started_at, "finished_at": datetime.now(timezone.utc).isoformat(),
         "provider": provider, "model": classifier.model,
+        "classification_mode": "batch" if provider != "manual" and getattr(args, "batch", False) else "single",
+        "max_retries": retries,
         "min_interval_seconds": min_interval if provider != "manual" else 0,
         "classification_prompt_sha256": prompt_hash,
         "input_sha256": hashlib.sha256(args.input.read_bytes()).hexdigest(),

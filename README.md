@@ -1,8 +1,9 @@
 # Customer Message Automation Case
 
 Part A is implemented as a Python CLI with OpenAI Chat Completions, Gemini, and an
-explicit manual demo mode. Part B has not started; it follows the Part A review.
-The program prepares drafts for a representative. It does not send customer messages.
+explicit manual demo mode. Part B is an importable n8n workflow in `B-n8n/`
+(see [B-n8n/akis-aciklama.md](B-n8n/akis-aciklama.md)). The Part A program prepares
+drafts for a representative. It does not send customer messages.
 
 ## Timing
 
@@ -10,7 +11,9 @@ The program prepares drafts for a representative. It does not send customer mess
 - Implementation started: 2026-09-28 11:23, Europe/Istanbul.
 - First live DummyJSON run completed: 2026-09-28 11:32, Europe/Istanbul.
 - Target for all checks: 13:45; submission deadline: 14:00.
-- Overall completion: pending Part B and final review.
+- 12:11: work continued with Claude Code after the Codex usage limit was reached.
+- Part B workflow and verification script completed: 12:25, Europe/Istanbul.
+- Overall completion: pending final review.
 
 ## Quick Start
 
@@ -51,7 +54,7 @@ GEMINI_MODEL=gemini-3.8-flash
 HTTP_TIMEOUT_SECONDS=20
 HTTP_MAX_RETRIES=2
 LLM_MIN_INTERVAL_SECONDS=15
-CLASSIFICATION_PROMPT_PATH=prompts/classift_prompt.txt
+CLASSIFICATION_PROMPT_PATH=prompts/classify_prompt.txt
 ```
 
 Fill the key for the chosen provider. Either set `CLASSIFIER_PROVIDER` to `openai`
@@ -60,6 +63,16 @@ or `gemini`, or select it explicitly on the command line:
 ```powershell
 .\.venv\Scripts\python.exe A-mesaj-otomasyonu/main.py --provider openai --output-dir A-mesaj-otomasyonu/runs/openai
 .\.venv\Scripts\python.exe A-mesaj-otomasyonu/main.py --provider gemini --output-dir A-mesaj-otomasyonu/runs/gemini
+```
+
+For low-quota accounts, `--batch` classifies all messages (up to 50) in a single
+API request and `--max-retries 0` disables retries, so a full live check costs
+exactly one request. The batch response is accepted only if it contains exactly one
+valid classification for every supplied message ID; otherwise every message is
+handed off with a technical error.
+
+```powershell
+.\.venv\Scripts\python.exe A-mesaj-otomasyonu/main.py --provider gemini --batch --max-retries 0 --output-dir A-mesaj-otomasyonu/runs/gemini-batch
 ```
 
 Provider comparison runs go into ignored `runs/` directories to preserve the
@@ -147,15 +160,36 @@ and 2 `diger`. Twelve messages were handed off. Messages 2 and 6 had verified or
 details, message 1 failed ownership verification, message 3 was not found, and
 message 8 had verified order details plus an unresolved price question.
 
-Thirty offline tests pass. OpenAI has only been checked with contract tests because
+Thirty-two offline tests pass. OpenAI has only been checked with contract tests because
 no OpenAI key was supplied. Gemini was also called live after its key was added:
 six messages succeeded in the initial unpaced run, but a full 15-message acceptance
 run could not be completed. A subsequent run using the external prompt file had
 two successful classifications, one HTTP 503, and twelve HTTP 429 errors. The API
 then explicitly reported an exhausted free-tier limit of 20 requests/day for this
 project/model. See `A-mesaj-otomasyonu/verification.md` for the attempt history.
+Two single-request batch attempts (12:03 and 12:11) returned HTTP 401, i.e. the
+configured key was rejected; the key had not been updated in `.env` after it was
+regenerated. No batch classification result has been obtained yet.
 The delivered main outputs remain the successful manual + live DummyJSON run;
 failed Gemini results are not substituted or described as successful.
+
+## Part B: n8n Price Monitor
+
+`B-n8n/workflow.json` is adapted from the n8n template
+[Competitor price monitoring with web scraping, Google Sheets & Telegram (#4640)](https://n8n.io/workflows/4640-competitor-price-monitoring-with-web-scrapinggoogle-sheets-and-telegram/).
+It runs daily at 09:00 (Europe/Istanbul), follows `rel="next"` pagination over all
+laptop pages, stores numeric prices with a timestamp in Google Sheets, reports new
+products and price changes in one Telegram message, and routes every failure to a
+Telegram alert followed by Stop and Error. Setup, the change list against the
+template, and limitations are in [B-n8n/akis-aciklama.md](B-n8n/akis-aciklama.md).
+
+n8n was not run live. The Code-node JavaScript is verified by extracting it from
+`workflow.json` and executing it with Node.js (18 checks, including a live scrape
+of 20 pages / 117 products):
+
+```powershell
+node B-n8n/tests/verify_workflow.mjs
+```
 
 ## Deployment Boundary
 
@@ -175,7 +209,7 @@ classification can still be wrong even when its output matches the JSON schema.
 `prompts.json` is the canonical ordered record of user-authored prompts from the
 start of this conversation, including corrections. Original message timestamps
 are unavailable and have not been fabricated. System/environment messages are
-excluded. Runtime classification instructions live in `prompts/classift_prompt.txt`
+excluded. Runtime classification instructions live in `prompts/classify_prompt.txt`
 and are selected through `CLASSIFICATION_PROMPT_PATH` in `.env`. Run metadata
 records the loaded prompt's SHA-256 hash without copying its content.
 

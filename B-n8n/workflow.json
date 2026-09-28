@@ -1,0 +1,714 @@
+{
+  "name": "Laptop Price Monitor (webscraper.io test site)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      },
+      "name": "Daily 09:00 Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "name": "Manual Test Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Follows the site's rel=\"next\" link until the last page, so the page count is never hard-coded.\nconst START_URL = 'https://webscraper.io/test-sites/e-commerce/static/computers/laptops';\nconst MAX_PAGES = 100;\nconst PAUSE_MS = 500;\n\nconst pages = [];\nconst visited = new Set();\nlet url = START_URL;\n\nwhile (url) {\n  if (visited.has(url)) {\n    throw new Error(`Sayfalama döngüsü tespit edildi: ${url}`);\n  }\n  if (pages.length >= MAX_PAGES) {\n    throw new Error(`Sayfa sınırı (${MAX_PAGES}) aşıldı; tarama eksik kabul edildi.`);\n  }\n  visited.add(url);\n\n  let response;\n  try {\n    response = await this.helpers.httpRequest({\n      method: 'GET',\n      url,\n      timeout: 20000,\n      returnFullResponse: true,\n      headers: { 'User-Agent': 'n8n-laptop-price-monitor/1.0' },\n    });\n  } catch (error) {\n    throw new Error(`Sayfa açılamadı (${url}): ${error.message}`);\n  }\n\n  const html = typeof response.body === 'string' ? response.body : '';\n  if (!html.trim()) {\n    throw new Error(`Sayfa boş döndü: ${url}`);\n  }\n  pages.push({ json: { page_number: pages.length + 1, page_url: url, html } });\n\n  const nextTag = html.match(/<a\\b[^>]*\\brel=\"next\"[^>]*>/i);\n  const nextHref = nextTag ? nextTag[0].match(/\\bhref=\"([^\"]+)\"/i) : null;\n  url = nextHref ? new URL(nextHref[1].replace(/&amp;/g, '&'), url).href : null;\n\n  if (url && PAUSE_MS > 0) {\n    await new Promise((resolve) => setTimeout(resolve, PAUSE_MS));\n  }\n}\n\nreturn pages;\n"
+      },
+      "name": "Fetch All Pages",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        100
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extracts name, numeric price, review count and absolute link from every product card.\n// Any missing field, empty page or count mismatch fails the run instead of storing a partial scrape.\nconst decode = (value) => value\n  .replace(/&quot;/g, '\"').replace(/&#0?39;/g, \"'\")\n  .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')\n  .replace(/\\s+/g, ' ').trim();\n\nconst scrapedAt = new Date().toISOString();\nconst products = new Map();\nlet declaredTotal = null;\n\nfor (const { json: page } of $input.all()) {\n  const countMatch = page.html.match(/class=\"item-count\">\\s*(\\d+)\\s*items/i);\n  if (countMatch) declaredTotal = Number(countMatch[1]);\n\n  const cards = page.html.split('itemtype=\"https://schema.org/Product\"').slice(1);\n  if (cards.length === 0) {\n    throw new Error(`Sayfada ürün bulunamadı: ${page.page_url}`);\n  }\n\n  for (const card of cards) {\n    const titleTag = (card.match(/<a\\b[^>]*class=\"title\"[^>]*>/i) || [])[0] || '';\n    const href = (titleTag.match(/\\bhref=\"([^\"]+)\"/i) || [])[1];\n    const name = (titleTag.match(/\\btitle=\"([^\"]*)\"/i) || [])[1];\n    const priceText = ((card.match(/itemprop=\"price\"[^>]*>([^<]*)</i) || [])[1] || '').trim();\n    const reviewText = (card.match(/itemprop=\"reviewCount\"[^>]*>\\s*(\\d+)\\s*</i) || [])[1];\n\n    if (!href || !name || !/^\\$[\\d,]+(\\.\\d{1,2})?$/.test(priceText) || reviewText === undefined) {\n      throw new Error(`Eksik veya beklenmeyen ürün verisi: ${page.page_url}`);\n    }\n\n    const price = Number(priceText.replace(/[$,]/g, ''));\n    const productUrl = new URL(decode(href), page.page_url).href;\n    if (!products.has(productUrl)) {\n      products.set(productUrl, {\n        scraped_at: scrapedAt,\n        name: decode(name),\n        price,\n        price_cents: Math.round(price * 100),\n        review_count: Number(reviewText),\n        product_url: productUrl,\n      });\n    }\n  }\n}\n\nif (products.size === 0) {\n  throw new Error('Hiç ürün toplanamadı.');\n}\nif (declaredTotal !== null && products.size !== declaredTotal) {\n  throw new Error(`Site ${declaredTotal} ürün bildiriyor, ${products.size} benzersiz ürün toplandı; tarama eksik.`);\n}\n\nreturn [...products.values()].map((product) => ({ json: product }));\n"
+      },
+      "name": "Parse Products",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        100
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "latest_prices"
+        },
+        "options": {}
+      },
+      "name": "Read Latest Prices",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        720,
+        100
+      ],
+      "executeOnce": true,
+      "alwaysOutputData": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compares this run with latest_prices, keyed by product URL.\n// Cents are compared as integers so sheet locale or float rounding cannot fake a change.\nconst toCents = (value) => {\n  const digits = String(value ?? '').replace(/[^0-9-]/g, '');\n  return digits === '' ? null : Number(digits);\n};\n\nconst previous = new Map();\nfor (const { json: row } of $input.all()) {\n  const url = String(row.product_url ?? '').trim();\n  const cents = toCents(row.price_cents);\n  if (url && Number.isInteger(cents)) previous.set(url, cents);\n}\nconst isFirstRun = previous.size === 0;\n\nreturn $('Parse Products').all().map(({ json: product }) => {\n  const oldCents = previous.has(product.product_url) ? previous.get(product.product_url) : null;\n  let changeType = 'unchanged';\n  if (oldCents === null) changeType = isFirstRun ? 'baseline' : 'new';\n  else if (product.price_cents > oldCents) changeType = 'price_up';\n  else if (product.price_cents < oldCents) changeType = 'price_down';\n\n  return {\n    json: {\n      ...product,\n      previous_price: oldCents === null ? null : oldCents / 100,\n      change_type: changeType,\n    },\n  };\n});\n"
+      },
+      "name": "Detect Changes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        960,
+        100
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "price_history"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "scraped_at": "={{ $json.scraped_at }}",
+            "name": "={{ $json.name }}",
+            "price": "={{ $json.price }}",
+            "price_cents": "={{ $json.price_cents }}",
+            "review_count": "={{ $json.review_count }}",
+            "product_url": "={{ $json.product_url }}",
+            "change_type": "={{ $json.change_type }}",
+            "previous_price": "={{ $json.previous_price }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "scraped_at",
+              "displayName": "scraped_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "price",
+              "displayName": "price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "price_cents",
+              "displayName": "price_cents",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "review_count",
+              "displayName": "review_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "product_url",
+              "displayName": "product_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "change_type",
+              "displayName": "change_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "previous_price",
+              "displayName": "previous_price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "name": "Append Price History",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        1200,
+        100
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Builds a single Telegram message for the whole run instead of one alert per product.\nconst MAX_LINES = 30;\nconst money = (value) => `$${Number(value).toFixed(2)}`;\nconst products = $('Detect Changes').all().map((item) => item.json);\nconst byType = (type) => products.filter((product) => product.change_type === type);\nconst runTime = new Date(products[0].scraped_at).toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' });\n\nif (byType('baseline').length === products.length) {\n  return [{ json: {\n    notify: true,\n    message: `Laptop fiyat takibi başlatıldı (${runTime}).\\n${products.length} ürün başlangıç kaydı olarak tabloya yazıldı. Sonraki çalışmalarda yalnızca yeni ürünler ve fiyat değişiklikleri bildirilecek.`,\n  } }];\n}\n\nconst lines = [\n  ...byType('new').map((p) => `🆕 Yeni: ${p.name} - ${money(p.price)}\\n${p.product_url}`),\n  ...byType('price_down').map((p) => `📉 Düştü: ${p.name} ${money(p.previous_price)} → ${money(p.price)}\\n${p.product_url}`),\n  ...byType('price_up').map((p) => `📈 Arttı: ${p.name} ${money(p.previous_price)} → ${money(p.price)}\\n${p.product_url}`),\n];\n\nif (lines.length === 0) {\n  return [{ json: { notify: false, message: '' } }];\n}\n\nconst shown = lines.slice(0, MAX_LINES);\nif (lines.length > MAX_LINES) shown.push(`… ve ${lines.length - MAX_LINES} değişiklik daha (price_history sayfasına bakın).`);\n\nreturn [{ json: {\n  notify: true,\n  message: [\n    `Laptop fiyat takibi - ${runTime}`,\n    `Taranan ürün: ${products.length} | Yeni: ${byType('new').length} | Düşen: ${byType('price_down').length} | Artan: ${byType('price_up').length}`,\n    '',\n    ...shown,\n  ].join('\\n'),\n} }];\n"
+      },
+      "name": "Build Change Summary",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1440,
+        100
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "notify-true",
+              "leftValue": "={{ $json.notify }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Has Changes?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1680,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "name": "Send Change Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1920,
+        0
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// The Telegram / IF branch replaced the items; restore the scraped products for the master sheet update.\nreturn $('Detect Changes').all();\n"
+      },
+      "name": "Restore Product Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_SPREADSHEET_ID"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "latest_prices"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "product_url": "={{ $json.product_url }}",
+            "name": "={{ $json.name }}",
+            "price": "={{ $json.price }}",
+            "price_cents": "={{ $json.price_cents }}",
+            "review_count": "={{ $json.review_count }}",
+            "scraped_at": "={{ $json.scraped_at }}"
+          },
+          "matchingColumns": [
+            "product_url"
+          ],
+          "schema": [
+            {
+              "id": "product_url",
+              "displayName": "product_url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "name",
+              "displayName": "name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "price",
+              "displayName": "price",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "price_cents",
+              "displayName": "price_cents",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "review_count",
+              "displayName": "review_count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "scraped_at",
+              "displayName": "scraped_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {
+          "cellFormat": "RAW"
+        }
+      },
+      "name": "Update Latest Prices",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        2400,
+        100
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collapses any number of failed items into one alert so the error branch never floods the chat.\nconst first = $input.first().json;\nconst detail = first.error?.message ?? first.error ?? first.message ?? 'Ayrıntı yok';\nconst step = $prevNode.name ?? 'bilinmeyen adım';\nconst time = new Date().toLocaleString('tr-TR', { timeZone: 'Europe/Istanbul' });\n\nreturn [{ json: {\n  step,\n  message: `⚠️ Laptop fiyat takibi BAŞARISIZ (${time})\\nAdım: ${step}\\nHata: ${String(detail).slice(0, 500)}\\nBu çalışma karşılaştırma referansı olarak kaydedilmedi. Execution: ${$execution.id}`,\n} }];\n"
+      },
+      "name": "Build Error Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_TELEGRAM_CHAT_ID",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "name": "Send Error Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1440,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "errorMessage": "={{ 'Fiyat takibi başarısız: ' + $('Build Error Alert').first().json.step }}"
+      },
+      "name": "Mark Execution Failed",
+      "type": "n8n-nodes-base.stopAndError",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        460
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 1. Tetikleyici\nHer gün 09:00 (workflow ayarı: Europe/Istanbul). Manuel tetikleyici test içindir.\n\nBaşlangıç şablonu: *Competitor price monitoring with web scraping, Google Sheets & Telegram* (n8n #4640).",
+        "width": 460,
+        "height": 180
+      },
+      "name": "Note Trigger",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -220
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 2. Tüm sayfalar\n`rel=\"next\"` bağlantısı bitene kadar `?page=N` sayfalarını gezer; sayfa sayısı sabit değildir. Fiyat `$` temizlenip sayıya çevrilir. Site toplamıyla eşleşmeyen tarama hataya düşer.",
+        "width": 460,
+        "height": 180
+      },
+      "name": "Note Scrape",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        220,
+        -220
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 3-4. Tablo + değişiklik tespiti\n`latest_prices` önceki tamamlanmış çalışmadır (ürün URL'si anahtar). Her çalışma tarih damgasıyla `price_history` sayfasına eklenir. Yeni ürün / artan / düşen fiyat tek Telegram mesajında bildirilir.",
+        "width": 700,
+        "height": 180
+      },
+      "name": "Note Compare",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        700,
+        -220
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## Sıralama\n`latest_prices` bildirimden SONRA güncellenir: bildirim gönderilemezse referans ilerlemez ve değişiklik bir sonraki çalışmada tekrar yakalanır.",
+        "width": 560,
+        "height": 180
+      },
+      "name": "Note Master",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1900,
+        -220
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 5. Hata dalı\nSite açılmazsa, hiç ürün gelmezse, eksik tarama ya da Sheets/Telegram hatası olursa Telegram hata bildirimi gider ve execution **Stop and Error** ile başarısız işaretlenir; akış sessizce başarılı bitmez.",
+        "width": 440,
+        "height": 220
+      },
+      "name": "Note Error",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        700,
+        400
+      ]
+    }
+  ],
+  "connections": {
+    "Daily 09:00 Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch All Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Test Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch All Pages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch All Pages": {
+      "main": [
+        [
+          {
+            "node": "Parse Products",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Products": {
+      "main": [
+        [
+          {
+            "node": "Read Latest Prices",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Latest Prices": {
+      "main": [
+        [
+          {
+            "node": "Detect Changes",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detect Changes": {
+      "main": [
+        [
+          {
+            "node": "Append Price History",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Price History": {
+      "main": [
+        [
+          {
+            "node": "Build Change Summary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Change Summary": {
+      "main": [
+        [
+          {
+            "node": "Has Changes?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Changes?": {
+      "main": [
+        [
+          {
+            "node": "Send Change Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Restore Product Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Change Alert": {
+      "main": [
+        [
+          {
+            "node": "Restore Product Rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Restore Product Rows": {
+      "main": [
+        [
+          {
+            "node": "Update Latest Prices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Latest Prices": {
+      "main": [
+        [],
+        [
+          {
+            "node": "Build Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Error Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Error Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Error Alert": {
+      "main": [
+        [
+          {
+            "node": "Mark Execution Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Istanbul"
+  },
+  "pinData": {},
+  "meta": {
+    "templateId": "4640"
+  }
+}
