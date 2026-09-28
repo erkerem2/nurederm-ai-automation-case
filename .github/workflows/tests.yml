@@ -1,0 +1,40 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  part-a-unit-tests:
+    name: Part A unit tests (offline)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install -r requirements.txt
+      - name: Run unit tests with outbound HTTP blocked
+        # A dead proxy makes any accidental real request fail, proving the suite is offline
+        # and needs no API keys. The live checks live in tests/live_acceptance.py instead.
+        env:
+          HTTP_PROXY: http://127.0.0.1:9
+          HTTPS_PROXY: http://127.0.0.1:9
+        run: python -m unittest discover -s A-mesaj-otomasyonu -p "test_*.py" -v
+
+  part-b-workflow-checks:
+    name: Part B workflow checks (offline)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: node B-n8n/tests/verify_workflow.mjs --offline

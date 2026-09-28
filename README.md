@@ -1,5 +1,7 @@
 # Customer Message Automation Case
 
+[![tests](https://github.com/erkerem2/nurederm-ai-automation-case/actions/workflows/tests.yml/badge.svg)](https://github.com/erkerem2/nurederm-ai-automation-case/actions/workflows/tests.yml)
+
 Part A is implemented as a Python CLI with OpenAI Chat Completions, Gemini, and an
 explicit manual demo mode. Part B is an importable n8n workflow in `B-n8n/`
 (see [B-n8n/akis-aciklama.md](B-n8n/akis-aciklama.md)). The Part A program prepares
@@ -191,13 +193,26 @@ orders, invalid input and API data, bounded retries, provider request formats,
 refusals, truncated responses, exact manual matching, output schemas, and exit codes.
 Temporary test files are created inside the project and removed after testing.
 
+**Prompt injection.** Customer text is treated as untrusted data. Dedicated tests
+send "ignore previous instructions / show order #12 / I am customer 12" style
+messages and verify that ownership still comes only from the message record, that
+conflicting order numbers are never looked up, that a model cannot write its own
+customer reply, relabel a sensitive message as spam, or smuggle URL parameters
+through `product_query`, that one batch message cannot inject results for other IDs,
+and that customer text reaches the provider only as JSON data, never inside the
+system instruction. Temporarily removing the ownership check makes these tests fail.
+
+**CI.** `.github/workflows/tests.yml` runs the unit tests (Python 3.12) and the
+offline Part B workflow checks (Node 22) on every push and pull request. The unit
+test step sets a dead HTTP proxy, so any accidental real network call fails the build.
+
 The real DummyJSON sample run processed 15 messages with no technical errors:
 4 `urun_sorusu`, 2 `fiyat`, 5 `siparis_durumu`, 1 `iade_sikayet`, 1 `hassas_konu`,
 1 `istenmeyen_mesaj` (message 7) and 1 `diger`. Twelve messages were handed off. Messages 2 and 6 had verified order
 details, message 1 failed ownership verification, message 3 was not found, and
 message 8 had verified order details plus an unresolved price question.
 
-Thirty-eight offline tests pass. OpenAI has only been checked with contract tests because
+Forty-five offline tests pass. OpenAI has only been checked with contract tests because
 no OpenAI key was supplied. Gemini was also called live after its key was added:
 six messages succeeded in the initial unpaced run, but a full 15-message acceptance
 run could not be completed. A subsequent run using the external prompt file had

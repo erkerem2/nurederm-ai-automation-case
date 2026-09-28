@@ -19,6 +19,18 @@
       "phase": "proje-sonu",
       "role": "user",
       "content": "Bir de kategorilere istenmeyen mesaj diye bir kategori ekle, bunlar reklam veya benzeri şeyler olacak şekilde. sonra sen tekrar sınıflandır"
+    },
+    {
+      "sequence": 22,
+      "phase": "proje-sonu",
+      "role": "user",
+      "content": "Başka ne önerilerin var öncekiler ağırlıklı olarak bende olmayan servisleri kullanmamı gerektiriyor. Ona göre öneride bulun"
+    },
+    {
+      "sequence": 23,
+      "phase": "proje-sonu",
+      "role": "user",
+      "content": "Github actions ile birim testlerini otomatize yapmayı ve prompt injection testleri ekleyelim"
     }
   ]
 }
