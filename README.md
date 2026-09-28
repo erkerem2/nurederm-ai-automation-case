@@ -2,6 +2,50 @@
 
 [![tests](https://github.com/erkerem2/nurederm-ai-automation-case/actions/workflows/tests.yml/badge.svg)](https://github.com/erkerem2/nurederm-ai-automation-case/actions/workflows/tests.yml)
 
+## Özet (TR)
+
+> **Gereksinim: Python 3.11 veya üstü** (kod `enum.StrEnum` kullanıyor; 3.12 ile test edildi).
+> Bölüm B'nin yerel kontrolleri için Node.js 18+ (22 ile test edildi). Bölüm A için internet gerekir (DummyJSON).
+
+**Başlama – bitiş** (Europe/Istanbul):
+- Görev alındı: 11:00. Kodlamaya başlandı: 11:23.
+- **Zorunlu kısımların bitişi (Bölüm A + Bölüm B): ~12:35**
+- **Testler ve eklemelerin bitişi: 13:35** (ürün arama bonusu, HTML ve kanal özeti, canlı kabul testi, prompt injection testleri, CI, dokümantasyon)
+
+**Nasıl çalıştırılır** (repo kökünden, PowerShell; macOS/Linux'ta `.venv/bin/python`):
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe A-mesaj-otomasyonu/main.py --provider manual      # A: talepler.json, ozet.txt, ozet.html
+.\.venv\Scripts\python.exe -m unittest discover -s A-mesaj-otomasyonu -p "test_*.py"   # 45 çevrimdışı test
+node B-n8n/tests/verify_workflow.mjs                                            # B: Code düğümleri + gerçek site
+```
+
+**Ne yaptık:**
+- **A:** Mesajlar LLM ile sınıflandırılıyor (OpenAI veya Gemini; anahtarsız çalıştırma için incelenmiş manuel mod var). Sipariş bilgisi `/carts/{id}` ile çekiliyor ve `userId` ≠ `musteri_id` ise hiçbir detay verilmiyor. Hassas konular, iade ve istenmeyen mesajlar kurala göre işleniyor. Bonus olarak `/products/search` araması yapılıyor. Çıktılar: `talepler.json`, `ozet.txt` ve `ozet.html` (konu ve kanal bazlı sayılar).
+- **B:** n8n şablonu [#4640](https://n8n.io/workflows/4640-competitor-price-monitoring-with-web-scrapinggoogle-sheets-and-telegram/) temel alındı. Akış tüm sayfaları geziyor, fiyatı sayı olarak Google Sheets'e tarih damgasıyla yazıyor, değişiklikleri Telegram'a bildiriyor ve bir hata dalı içeriyor. Ayrıntılar [B-n8n/akis-aciklama.md](B-n8n/akis-aciklama.md) dosyasında.
+- **Test:** 45 birim testi (7'si prompt injection) her push'ta GitHub Actions'ta ağsız çalışıyor. Gerçek API ile sızıntı kontrolü `tests/live_acceptance.py` içinde.
+
+**Nerede takıldık:**
+- Gemini free tier kotası (20 istek/gün): tek istekli batch moduna ve `gemini-2.5-flash-lite` modeline geçerek aşıldı.
+- OpenAI anahtarı yoktu.
+- Yenilenen Gemini anahtarı `.env` dosyasına kaydedilmemişti.
+- Codex kullanım limiti doldu, iş Claude Code ile devam etti.
+- Oturumda bağlantı kopmaları yaşandı.
+
+**Neyi bitiremedik:**
+- n8n canlı çalıştırılmadı, ekran görüntüsü yok.
+- OpenAI gerçek anahtarla denenmedi.
+- Güncel few-shot prompt canlı ölçülmedi.
+- Test mağazasında kozmetik ürün olmadığı için bonus arama bu mesajlarda ürün bulamıyor.
+
+Konu adları kullanıcı isteğiyle brief'ten farklı (alt çizgi, `hassas_konu`, ek olarak `istenmeyen_mesaj`); eşleşme tablosu aşağıda. Promptlar `promptlar/` klasöründe, silinmeden ve sırasıyla duruyor.
+
+**Detaylar (EN):** [Where We Got Stuck](#where-we-got-stuck--what-is-not-finished) · [Quick Start](#quick-start) · [API Configuration](#api-configuration) · [Processing Decisions](#processing-decisions) · [Failure Handling](#failure-handling) · [Verification](#verification) · [Part B](#part-b-n8n-price-monitor) · [Live Acceptance](#live-acceptance-checks) · [Deployment Boundary](#deployment-boundary) · [Prompt History](#prompt-history-and-sources)
+
+## Overview
+
 Part A is implemented as a Python CLI with OpenAI Chat Completions, Gemini, and an
 explicit manual demo mode. Part B is an importable n8n workflow in `B-n8n/`
 (see [B-n8n/akis-aciklama.md](B-n8n/akis-aciklama.md)). The Part A program prepares
@@ -16,9 +60,9 @@ drafts for a representative. It does not send customer messages.
 - 12:11: work continued with Claude Code after the Codex usage limit was reached.
 - Part B workflow and verification script completed: 12:18, Europe/Istanbul.
 - First successful live Gemini classification of all 15 messages: 12:38.
-- **Completed: ~12:35, Europe/Istanbul** (Part A, Part B and the product-search bonus).
-  The HTML summary, the repeatable live acceptance script and this documentation
-  were finished afterwards, before 13:00.
+- **Mandatory parts (Part A + Part B) completed: ~12:35, Europe/Istanbul.**
+- **Tests and additions completed: 13:35** (product-search bonus, HTML and channel
+  summary, live acceptance script, prompt-injection tests, CI, documentation).
 
 ## Where We Got Stuck / What Is Not Finished
 
@@ -45,7 +89,7 @@ drafts for a representative. It does not send customer messages.
 
 ## Quick Start
 
-Python 3.12 was used for verification. Run these commands from the repository root
+Python 3.11 or newer is required (`enum.StrEnum`); 3.12 was used for verification. Run these commands from the repository root
 in PowerShell. No activation or PowerShell execution-policy change is necessary.
 
 ```powershell
@@ -63,8 +107,9 @@ Outputs in `A-mesaj-otomasyonu/`:
 
 - `talepler.json`: one ticket per input message, in the original order.
 - `ozet.txt`: the same one-page summary printed to the terminal.
-- `ozet.html`: the same summary as a single-page HTML report (counts plus a ticket
-  table); open it directly in a browser.
+- `ozet.html`: the same summary as a single-page HTML report (topic and channel
+  counts plus a ticket table); open it directly in a browser.
+- Both summaries include a per-channel (WhatsApp / Instagram) message and handoff count.
 - `run_metadata.json`: provider, model, timestamps, input hash, and technical errors.
 
 The delivered sample output uses the coding assistant's own classifications (first

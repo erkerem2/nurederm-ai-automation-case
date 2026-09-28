@@ -10,6 +10,10 @@ hassas_konu: 1
 istenmeyen_mesaj: 1
 diger: 1
 
+Kanal bazında:
+instagram: 7 mesaj, 4 devir
+whatsapp: 8 mesaj, 8 devir
+
 Toplam: 15
 Temsilciye devredilecek: 12
 Teknik hata: 0

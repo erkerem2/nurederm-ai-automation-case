@@ -31,6 +31,24 @@
       "phase": "proje-sonu",
       "role": "user",
       "content": "Github actions ile birim testlerini otomatize yapmayı ve prompt injection testleri ekleyelim"
+    },
+    {
+      "sequence": 24,
+      "phase": "proje-sonu",
+      "role": "user",
+      "content": "Push tamam testler tamam başka ne yapabilir bir kaç farklı öneri daha ver öncekilerde kalan önerilerini beğenmedim veya soruna yol açabilecek şeyler"
+    },
+    {
+      "sequence": 25,
+      "phase": "proje-sonu",
+      "role": "user",
+      "content": "Python sürüm uyarısını ekle\nAdım 3te bahsettiğim uyarısı ekle\nReadme'yi bir topla\nbir de son olarak kanal bazlı özet yap whatsapp ve intragram ayrımını ekle"
+    },
+    {
+      "sequence": 26,
+      "phase": "proje-sonu",
+      "role": "user",
+      "content": "Bir de committen önce şunu ekle bitirdiğimiz saati zorunlulukların bittiği saat olarka düzelt 13.35'i de testler ve eklemelerin bittiği saat olarak ekle sonra bana revize ettğin commit'i ver"
     }
   ]
 }

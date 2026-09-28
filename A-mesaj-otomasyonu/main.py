@@ -95,6 +95,11 @@ def run(args) -> int:
     errors = [{"message_id": result.ticket.id, "code": result.error_code} for result in results if result.error_code]
     lines = ["MÜŞTERİ TALEPLERİ ÖZETİ", f"Sınıflandırma: {provider}", f"Model: {classifier.model or '-'}", ""]
     lines.extend(f"{topic.value}: {counts[topic.value]}" for topic in Topic)
+    channels = {message.id: message.channel for message in messages}
+    lines.extend(["", "Kanal bazında:"])
+    for channel in sorted(set(channels.values())):
+        in_channel = [ticket for ticket in tickets if channels[ticket["id"]] == channel]
+        lines.append(f"{channel}: {len(in_channel)} mesaj, {sum(t['devret'] for t in in_channel)} devir")
     lines.extend(["", f"Toplam: {len(tickets)}", f"Temsilciye devredilecek: {sum(ticket['devret'] for ticket in tickets)}",
                   f"Teknik hata: {len(errors)}"])
     if provider == "manual":
@@ -114,7 +119,7 @@ def run(args) -> int:
     write_atomic(args.output_dir / "talepler.json", json.dumps(tickets, ensure_ascii=False, indent=2, allow_nan=False) + "\n")
     write_atomic(args.output_dir / "ozet.txt", summary)
     write_atomic(args.output_dir / "ozet.html",
-                 render_html(tickets, provider, classifier.model, errors, metadata["finished_at"]))
+                 render_html(tickets, provider, classifier.model, errors, metadata["finished_at"], channels))
     write_atomic(args.output_dir / "run_metadata.json", json.dumps(metadata, indent=2) + "\n")
     print(summary)
     return 2 if errors else 0

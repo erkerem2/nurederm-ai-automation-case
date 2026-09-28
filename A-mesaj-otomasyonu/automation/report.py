@@ -36,18 +36,23 @@ code { font-size: .85rem; }
 """
 
 
-def render_html(tickets: list[dict], provider: str, model: str | None, errors: list[dict], generated_at: str) -> str:
+def render_html(tickets: list[dict], provider: str, model: str | None, errors: list[dict], generated_at: str,
+                channels: dict[int, str] | None = None) -> str:
+    channels = channels or {}
     counts = Counter(ticket["konu"] for ticket in tickets)
     handoffs = sum(ticket["devret"] for ticket in tickets)
     stats = [(len(tickets), "Toplam mesaj", False), (handoffs, "Temsilciye devredilecek", handoffs > 0),
              (len(errors), "Teknik hata", bool(errors))]
     stats += [(counts[topic.value], topic.value, False) for topic in Topic]
+    for channel in sorted(set(channels.values())):
+        in_channel = [t for t in tickets if channels.get(t["id"]) == channel]
+        stats.append((len(in_channel), f"{channel} ({sum(t['devret'] for t in in_channel)} devir)", False))
     cards = "".join(
         f'<div class="stat{" warn" if warn else ""}"><b>{value}</b><span>{escape(label)}</span></div>'
         for value, label, warn in stats)
     rows = "".join(
         "<tr>"
-        f"<td>{ticket['id']}</td><td><code>{escape(ticket['konu'])}</code></td>"
+        f"<td>{ticket['id']}</td><td>{escape(channels.get(ticket['id'], '-'))}</td><td><code>{escape(ticket['konu'])}</code></td>"
         f'<td><span class="badge {"yes" if ticket["devret"] else "no"}">{"Evet" if ticket["devret"] else "Hayır"}</span></td>'
         f"<td>{escape(ticket['cevap_taslagi']) or '<em>Yanıt yok</em>'}</td>"
         f'<td class="note">{escape(ticket["not"])}</td>'
@@ -68,7 +73,7 @@ def render_html(tickets: list[dict], provider: str, model: str | None, errors: l
 <section class="stats">{cards}</section>
 <div class="table-wrap">
 <table>
-<thead><tr><th>ID</th><th>Konu</th><th>Devret</th><th>Cevap taslağı</th><th>Not</th></tr></thead>
+<thead><tr><th>ID</th><th>Kanal</th><th>Konu</th><th>Devret</th><th>Cevap taslağı</th><th>Not</th></tr></thead>
 <tbody>{rows}</tbody>
 </table>
 </div>
