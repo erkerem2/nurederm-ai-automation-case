@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 import json
 from pathlib import Path
+import re
 
 
 class Topic(StrEnum):
@@ -46,10 +47,11 @@ class Classification:
     topic: Topic
     secondary_topics: tuple[Topic, ...] = ()
     is_spam: bool = False
+    product_query: str = ""
 
     @classmethod
     def parse(cls, value: object) -> "Classification":
-        if not isinstance(value, dict) or set(value) != {"topic", "secondary_topics", "is_spam"}:
+        if not isinstance(value, dict) or set(value) != {"topic", "secondary_topics", "is_spam", "product_query"}:
             raise ProviderError("classification_invalid_schema")
         try:
             topic = Topic(value["topic"])
@@ -61,13 +63,18 @@ class Classification:
                 raise ValueError
             if type(value["is_spam"]) is not bool:
                 raise ValueError
+            query = value["product_query"]
+            # Short English catalog keywords only; anything else could smuggle text into an API URL.
+            if not isinstance(query, str) or not re.fullmatch(r"[A-Za-z0-9 .'-]{0,60}", query.strip()):
+                raise ValueError
             # Sensitive intent always wins, including when a model marks it secondary.
             all_topics = (topic, *topics)
             primary = next((item for item in (Topic.SENSITIVE, Topic.RETURN, Topic.ORDER)
                             if item in all_topics), topic)
             if value["is_spam"] and any(item != Topic.OTHER for item in all_topics):
                 raise ValueError
-            return cls(primary, tuple(item for item in all_topics if item != primary), value["is_spam"])
+            return cls(primary, tuple(item for item in all_topics if item != primary), value["is_spam"],
+                       " ".join(query.split()))
         except (ValueError, TypeError):
             raise ProviderError("classification_invalid_schema") from None
 

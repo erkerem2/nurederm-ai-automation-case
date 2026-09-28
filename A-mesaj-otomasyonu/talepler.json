@@ -59,22 +59,22 @@
     "id": 9,
     "konu": "urun_sorusu",
     "devret": true,
-    "cevap_taslagi": "Sorunuz için doğrulanmış bilgiyi paylaşabilmesi adına sizi müşteri temsilcimize yönlendiriyoruz.",
-    "not": "Ürün, fiyat veya mağaza politikası için doğrulanmış bilgi kaynağı bulunmuyor. Manuel demo sınıflandırması; çalışma anında LLM kullanılmadı."
+    "cevap_taslagi": "Katalogumuzda bu ürünle eşleşen bir kayıt bulamadık. Sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "Ürün araması: 'retinol serum' için kozmetik kategorisinde eşleşme yok. Ürün uygunluğu, içerik ve güncel fiyat temsilci tarafından teyit edilmeli. Manuel demo sınıflandırması; çalışma anında LLM kullanılmadı."
   },
   {
     "id": 10,
     "konu": "fiyat",
     "devret": true,
-    "cevap_taslagi": "Sorunuz için doğrulanmış bilgiyi paylaşabilmesi adına sizi müşteri temsilcimize yönlendiriyoruz.",
-    "not": "Ürün, fiyat veya mağaza politikası için doğrulanmış bilgi kaynağı bulunmuyor. Manuel demo sınıflandırması; çalışma anında LLM kullanılmadı."
+    "cevap_taslagi": "Katalogumuzda bu ürünle eşleşen bir kayıt bulamadık. Sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "Ürün araması: 'moisturizing cream' için kozmetik kategorisinde eşleşme yok. Ürün uygunluğu, içerik ve güncel fiyat temsilci tarafından teyit edilmeli. Manuel demo sınıflandırması; çalışma anında LLM kullanılmadı."
   },
   {
     "id": 11,
     "konu": "urun_sorusu",
     "devret": true,
-    "cevap_taslagi": "Sorunuz için doğrulanmış bilgiyi paylaşabilmesi adına sizi müşteri temsilcimize yönlendiriyoruz.",
-    "not": "Ürün, fiyat veya mağaza politikası için doğrulanmış bilgi kaynağı bulunmuyor. Manuel demo sınıflandırması; çalışma anında LLM kullanılmadı."
+    "cevap_taslagi": "Katalogumuzda bu ürünle eşleşen bir kayıt bulamadık. Sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "Ürün araması: 'vitamin c serum' için kozmetik kategorisinde eşleşme yok. Ürün uygunluğu, içerik ve güncel fiyat temsilci tarafından teyit edilmeli. Manuel demo sınıflandırması; çalışma anında LLM kullanılmadı."
   },
   {
     "id": 12,
@@ -87,8 +87,8 @@
     "id": 13,
     "konu": "urun_sorusu",
     "devret": true,
-    "cevap_taslagi": "Sorunuz için doğrulanmış bilgiyi paylaşabilmesi adına sizi müşteri temsilcimize yönlendiriyoruz.",
-    "not": "Ürün, fiyat veya mağaza politikası için doğrulanmış bilgi kaynağı bulunmuyor. Manuel demo sınıflandırması; çalışma anında LLM kullanılmadı."
+    "cevap_taslagi": "Katalogumuzda bu ürünle eşleşen bir kayıt bulamadık. Sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "Ürün araması: 'toner' için kozmetik kategorisinde eşleşme yok. Ürün uygunluğu, içerik ve güncel fiyat temsilci tarafından teyit edilmeli. Manuel demo sınıflandırması; çalışma anında LLM kullanılmadı."
   },
   {
     "id": 14,

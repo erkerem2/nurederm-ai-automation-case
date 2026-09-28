@@ -78,7 +78,7 @@
       "sequence": 13,
       "phase": "B-planning",
       "role": "user",
-      "content": "Az önce bağlantı koptu, kaldığın yerden devam et. Planın güzel, başlangıç için şu linkteki n8n workflow'unu kullanalım: https://n8n.io/workflows/4640-competitor-price-monitoring-with-web-scrapinggoogle-sheets-and-telegram/ . Gemini API key'ini yeniledim, testlerini yapabilirsin ancak free tier olduğu için request sayısını ve sıklığını minimumda tut, yine tıkanmasın. Buna ek olarak Gemini veya OpenAI'a classify için verdiğin promptu dosya içine gömmek yerine harici bir variable olarak bağlayalım; environment içine dosya yolu olarak koy, \"classify_prompt.txt\" isimli text dosyasından okusun ve bu dosyayı da \"prompts\" adında ayrı bir klasörün içine koy ki ileride başka şeyler eklendiğinde tüm promptlar bir arada dursun."
+      "content": "Planın güzel, başlangıç için şu linkteki n8n workflow'unu kullanalım: https://n8n.io/workflows/4640-competitor-price-monitoring-with-web-scrapinggoogle-sheets-and-telegram/ . Gemini API key'ini yeniledim, testlerini yapabilirsin ancak free tier olduğu için request sayısını ve sıklığını minimumda tut, yine tıkanmasın. Buna ek olarak Gemini veya OpenAI'a classify için verdiğin promptu dosya içine gömmek yerine harici bir variable olarak bağlayalım; environment içine dosya yolu olarak koy, \"classify_prompt.txt\" isimli text dosyasından okusun ve bu dosyayı da \"prompts\" adında ayrı bir klasörün içine koy ki ileride başka şeyler eklendiğinde tüm promptlar bir arada dursun."
     },
     {
       "sequence": 14,
@@ -91,6 +91,18 @@
       "phase": "B-planning",
       "role": "user",
       "content": "[Claude Code çoktan seçmeli soru yanıtları] Bildirim kanalı: Telegram (Recommended). Depolama: Google Sheets (Recommended). n8n ortamı: Yok, sadece JSON üret."
+    },
+    {
+      "sequence": 16,
+      "phase": "A",
+      "role": "user",
+      "content": "Öncelikle şunu değiştirelim prompts dosyasının adını değiştirelim veya classify.txt dosyasını ayrıca bir yerde tutalım çünkü case'in istediği promptlar dosyasında bizim verdiğimiz promptlar olacak. Bu case özelinde classif_prompt'u uygun gördüğün bir yere koy ve .env içinde değiştir. şimdilik sadece prompts.json üzerinden ilerleyelim en son A B aşamaları için ayırırız onu kafana takma.\n\nSon verdiğim promtu da eklememişsin onu da ekle bu yazdığımla birlikte, yani bundan sonra sana prompt verdiğimde ilk işin onu prompts.json'a eklemek olacak.\n\nŞimdi öncelikli olarak kapsamlı test yap bir kaç tane çok uzun tutma sonra ürün arama bonusuna geçelim.\n\nBen bir push daha attım sen yine commit önerisinde bulun uygun zamanlarda."
+    },
+    {
+      "sequence": 17,
+      "phase": "A",
+      "role": "user",
+      "content": "Bir de .env'i kayıt etmediğim için gemini key yenilenmemiş şimdi kayıt ettim tekrardan denyebilirsin"
     }
   ]
 }

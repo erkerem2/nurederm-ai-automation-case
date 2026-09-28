@@ -15,6 +15,7 @@ from automation.classifiers import BatchClassifier, GeminiClassifier, ManualClas
 from automation.domain import AutomationError, ConfigurationError, Topic, load_messages
 from automation.http_client import JsonClient
 from automation.orders import OrderClient
+from automation.products import ProductClient
 from automation.service import MessageService
 
 
@@ -72,7 +73,7 @@ def run(args) -> int:
         else:
             factory = OpenAIClassifier if provider == "openai" else GeminiClassifier
             default_model = "gpt-4.1-mini" if provider == "openai" else "gemini-3.8-flash"
-            prompt_path = Path(os.getenv("CLASSIFICATION_PROMPT_PATH", "prompts/classify_prompt.txt"))
+            prompt_path = Path(os.getenv("CLASSIFICATION_PROMPT_PATH", "A-mesaj-otomasyonu/llm_prompts/classify_prompt.txt"))
             system_prompt = load_prompt(prompt_path if prompt_path.is_absolute() else ROOT / prompt_path)
             prompt_hash = hashlib.sha256(system_prompt.encode("utf-8")).hexdigest()
             classifier = factory(client, os.getenv(f"{provider.upper()}_API_KEY", ""),
@@ -80,7 +81,7 @@ def run(args) -> int:
                                  system_prompt=system_prompt, min_interval=min_interval)
             if getattr(args, "batch", False):
                 classifier = BatchClassifier(classifier, messages)
-        service = MessageService(classifier, OrderClient(client))
+        service = MessageService(classifier, OrderClient(client), ProductClient(client))
         results = []
         for index, message in enumerate(messages, start=1):
             results.append(service.process(message))

@@ -54,7 +54,7 @@ GEMINI_MODEL=gemini-3.8-flash
 HTTP_TIMEOUT_SECONDS=20
 HTTP_MAX_RETRIES=2
 LLM_MIN_INTERVAL_SECONDS=15
-CLASSIFICATION_PROMPT_PATH=prompts/classify_prompt.txt
+CLASSIFICATION_PROMPT_PATH=A-mesaj-otomasyonu/llm_prompts/classify_prompt.txt
 ```
 
 Fill the key for the chosen provider. Either set `CLASSIFIER_PROVIDER` to `openai`
@@ -86,7 +86,7 @@ sufficient. A 15-message live run therefore takes at least about 3.5 minutes.
 Both providers load their system instructions from `CLASSIFICATION_PROMPT_PATH`.
 Relative paths are resolved from the repository root, not the shell's working
 directory. An unreadable or empty prompt file stops API mode before any requests.
-Runtime prompts live together in `prompts/`; edits take effect on the next run.
+Runtime LLM prompts live in `A-mesaj-otomasyonu/llm_prompts/`, separate from the user prompt history; edits take effect on the next run.
 
 Models are configurable and require access in the corresponding API account.
 Both adapters request structured JSON and validate the result locally. OpenAI
@@ -122,7 +122,7 @@ The original `case-brief.md` and `mesajlar.json` are unchanged.
 - A missing cart (HTTP 404) is a normal handoff. Network errors and malformed responses are technical failures and also hand off safely.
 - Message 8 keeps `siparis_durumu` as its main topic and records the additional `fiyat` intent in the note; the unanswered price question causes handoff.
 - Message 12 asks a general shipping-policy question, so it is `diger`. Message 15 asks about product/brand policy, so it is `urun_sorusu`.
-- Product, price, and policy questions hand off because a verified store knowledge source has not been supplied. Product search is an optional bonus and is not implemented yet.
+- Product, price, and policy questions hand off because a verified store knowledge source has not been supplied. Bonus product search: for `urun_sorusu` / `fiyat`, the classifier also returns a short English `product_query` (validated as 1-60 keyword characters). The program calls `GET https://dummyjson.com/products/search`, keeps only `beauty`, `skin-care` and `fragrances` items whose title contains every query word (the store search also matches descriptions, e.g. "cream" returns "Ice Cream"), and lists at most three with their API price. The message is still handed off: catalog data never answers suitability, ingredient or policy questions. For the supplied messages (retinol serum, moisturizing cream, vitamin c serum, toner) the test store has no cosmetic match, so the drafts say so instead of suggesting an unrelated product. A catalog failure is reported as a technical error.
 - Spam receives an empty response draft. Links in customer messages are never opened.
 - `manual` accepts only an exact ID/text match from `manual_classifications.json`. A new or edited message is flagged for human review with a technical error, not silently assigned a stored label.
 
@@ -160,7 +160,7 @@ and 2 `diger`. Twelve messages were handed off. Messages 2 and 6 had verified or
 details, message 1 failed ownership verification, message 3 was not found, and
 message 8 had verified order details plus an unresolved price question.
 
-Thirty-two offline tests pass. OpenAI has only been checked with contract tests because
+Thirty-seven offline tests pass. OpenAI has only been checked with contract tests because
 no OpenAI key was supplied. Gemini was also called live after its key was added:
 six messages succeeded in the initial unpaced run, but a full 15-message acceptance
 run could not be completed. A subsequent run using the external prompt file had
@@ -209,7 +209,7 @@ classification can still be wrong even when its output matches the JSON schema.
 `prompts.json` is the canonical ordered record of user-authored prompts from the
 start of this conversation, including corrections. Original message timestamps
 are unavailable and have not been fabricated. System/environment messages are
-excluded. Runtime classification instructions live in `prompts/classify_prompt.txt`
+excluded. Runtime classification instructions live in `A-mesaj-otomasyonu/llm_prompts/classify_prompt.txt`
 and are selected through `CLASSIFICATION_PROMPT_PATH` in `.env`. Run metadata
 records the loaded prompt's SHA-256 hash without copying its content.
 

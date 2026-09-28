@@ -74,6 +74,24 @@ without including API credentials or raw provider error bodies.
    `runs/gemini-batch/` directory; its prompt SHA-256 differs because the batch
    instructions were appended to the prompt file.
 
+8. After the regenerated key was saved to `.env` (12:40), authentication passed,
+   but the single batch request on `gemini-3.8-flash` returned a structured daily
+   quota error (`http_429_daily_quota`): the new key belongs to the same project
+   and shares its exhausted 20 requests/day. `models.list` (no generation quota)
+   showed other Flash models. Two batch requests on `gemini-3.7-flash` and one
+   minimal "Say OK" probe all timed out (90 s / 60 s) without any response, so
+   that endpoint was unresponsive for this account; no further requests were sent.
+   Timeouts were previously reported as `network_unavailable`; they now have their
+   own `timeout` error code so a slow provider is distinguishable from no network.
+
+## Product Search Bonus
+
+The manual run at 12:58 performed four real `/products/search` calls (messages 9,
+10, 11 and 13). None returned a cosmetic product whose title matches the query, so
+all four drafts state that no catalog match was found and hand off. The matched
+path, category/title filtering, catalog failures and query validation are covered
+by offline tests. Live LLM extraction of `product_query` has not been verified.
+
 ## Outstanding Verification
 
 - A complete 15-message Gemini acceptance run still needs an available quota.

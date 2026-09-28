@@ -17,6 +17,7 @@ from automation.classifiers import BatchClassifier, GeminiClassifier, ManualClas
 from automation.domain import Classification, ConfigurationError, InputError, Message, ProviderError, Topic, load_messages
 from automation.http_client import HttpError, JsonClient
 from automation.orders import OrderClient, extract_order_ids
+from automation.products import CatalogError, ProductClient
 from automation.service import MessageService
 import main
 
@@ -25,8 +26,8 @@ APP_DIR = Path(__file__).resolve().parents[1]
 WORKSPACE = APP_DIR.parent
 
 
-def classification(topic="siparis_durumu", secondary=None, spam=False):
-    return {"topic": topic, "secondary_topics": secondary or [], "is_spam": spam}
+def classification(topic="siparis_durumu", secondary=None, spam=False, query=""):
+    return {"topic": topic, "secondary_topics": secondary or [], "is_spam": spam, "product_query": query}
 
 
 def response(status=200, body=None):
@@ -72,7 +73,7 @@ class ProviderTests(unittest.TestCase):
     def setUp(self):
         self.client = Mock()
         self.message = Message(6, "instagram", 3, "Hi, where is my order #3?")
-        self.prompt = load_prompt(WORKSPACE / "prompts" / "classify_prompt.txt")
+        self.prompt = load_prompt(WORKSPACE / "A-mesaj-otomasyonu" / "llm_prompts" / "classify_prompt.txt")
 
     def test_openai_chat_completions_contract(self):
         self.client.request.return_value = {"choices": [{"finish_reason": "stop", "message": {"content": json.dumps(classification())}}]}
@@ -276,6 +277,64 @@ class ServiceTests(unittest.TestCase):
         self.orders.fetch.assert_not_called()
 
 
+class CatalogTests(unittest.TestCase):
+    def setUp(self):
+        self.classifier = Mock()
+        self.classifier.name = "openai"
+        self.http = Mock()
+        self.service = MessageService(self.classifier, Mock(), ProductClient(self.http))
+        self.message = Message(9, "whatsapp", 1, "Retinol serumunuz var mı? Kuru ciltte kullanılır mı?")
+
+    def classify(self, topic="urun_sorusu", query="serum"):
+        self.classifier.classify.return_value = Classification.parse(classification(topic, query=query))
+
+    def test_search_lists_only_cosmetics_whose_title_matches(self):
+        self.classify(query="cream")
+        self.http.request.return_value = {"products": [
+            {"title": "Ice Cream", "price": 5.49, "category": "groceries"},
+            {"title": "Red Lipstick", "price": 12.99, "category": "beauty"},
+            {"title": "Night Cream", "price": 20, "category": "skin-care"},
+        ]}
+        result = self.service.process(self.message)
+        self.assertIn("Night Cream (fiyat: 20,00)", result.ticket.draft)
+        self.assertNotIn("Ice Cream", result.ticket.draft)
+        self.assertNotIn("Lipstick", result.ticket.draft)
+        self.assertTrue(result.ticket.handoff)
+        self.assertIsNone(result.error_code)
+        self.assertIn("/products/search?q=cream", self.http.request.call_args.args[1])
+
+    def test_no_match_hands_off_without_inventing_products(self):
+        self.classify(topic="fiyat", query="sunscreen")
+        self.http.request.return_value = {"products": [], "total": 0}
+        result = self.service.process(self.message)
+        self.assertTrue(result.ticket.handoff)
+        self.assertIn("bulamadık", result.ticket.draft)
+        self.assertEqual(result.ticket.topic, Topic.PRICE)
+
+    def test_catalog_failure_is_reported_as_technical_error(self):
+        self.classify()
+        for failure in (HttpError("http_503"), None):
+            with self.subTest(failure=failure):
+                self.http.request.side_effect = failure
+                self.http.request.return_value = {"products": [{"title": "Serum", "price": "9.99", "category": "beauty"}]}
+                result = self.service.process(self.message)
+                self.assertTrue(result.ticket.handoff)
+                self.assertTrue(result.error_code.startswith("catalog_"))
+                self.assertNotIn("9.99", result.ticket.draft)
+
+    def test_empty_query_or_other_topics_skip_the_catalog(self):
+        for topic, query in (("urun_sorusu", ""), ("diger", ""), ("hassas_konu", "")):
+            with self.subTest(topic=topic):
+                self.classify(topic, query)
+                self.service.process(self.message)
+        self.http.request.assert_not_called()
+
+    def test_query_rejects_non_keyword_text(self):
+        for query in ("serum&limit=0", "x" * 61, "serum?q=x", "krem şişe"):
+            with self.subTest(query=query), self.assertRaises(ProviderError):
+                Classification.parse(classification("urun_sorusu", query=query))
+
+
 class TransportTests(unittest.TestCase):
     def test_daily_quota_failure_is_not_retried(self):
         session, sleep = Mock(), Mock()
@@ -313,6 +372,10 @@ class TransportTests(unittest.TestCase):
         session.request.side_effect = requests.Timeout("SECRET KEY")
         with self.assertRaises(HttpError) as caught:
             JsonClient(session=session, sleep=Mock()).request("POST", "https://example.com")
+        self.assertEqual(str(caught.exception), "timeout")
+        session.request.side_effect = requests.ConnectionError("SECRET KEY")
+        with self.assertRaises(HttpError) as caught:
+            JsonClient(session=session, sleep=Mock()).request("POST", "https://example.com")
         self.assertEqual(str(caught.exception), "network_unavailable")
 
     def test_invalid_json_is_not_retried(self):
@@ -331,7 +394,7 @@ class TransportTests(unittest.TestCase):
         message = load_messages(WORKSPACE / "mesajlar.json")[0]
         result = service.process(message)
         self.assertTrue(result.ticket.handoff)
-        self.assertEqual(result.error_code, "cart_network_unavailable")
+        self.assertEqual(result.error_code, "cart_timeout")
 
 
 class InputAndRunTests(unittest.TestCase):

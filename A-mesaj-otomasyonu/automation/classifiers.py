@@ -14,8 +14,9 @@ SCHEMA = {
         "topic": {"type": "string", "enum": [topic.value for topic in Topic]},
         "secondary_topics": {"type": "array", "items": {"type": "string", "enum": [topic.value for topic in Topic]}},
         "is_spam": {"type": "boolean"},
+        "product_query": {"type": "string"},
     },
-    "required": ["topic", "secondary_topics", "is_spam"],
+    "required": ["topic", "secondary_topics", "is_spam", "product_query"],
     "additionalProperties": False,
 }
 

@@ -23,11 +23,12 @@ class JsonClient:
                     method, url, headers=headers, json=payload,
                     timeout=(min(5, self.timeout), self.timeout), allow_redirects=False,
                 )
-            except (requests.Timeout, requests.ConnectionError):
+            except (requests.Timeout, requests.ConnectionError) as error:
                 if attempt < self.retries:
                     self.sleep(2 ** attempt)
                     continue
-                raise HttpError("network_unavailable") from None
+                # A slow provider and an unreachable one need different fixes, so keep them apart.
+                raise HttpError("timeout" if isinstance(error, requests.Timeout) else "network_unavailable") from None
             except requests.RequestException:
                 raise HttpError("request_failed") from None
             if response.status_code == 404 and allow_not_found:
