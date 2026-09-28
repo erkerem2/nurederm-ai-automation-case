@@ -346,8 +346,11 @@ classification can still be wrong even when its output matches the JSON schema.
 
 `promptlar/` holds every user-authored prompt verbatim and in order, including
 failed attempts and corrections: `A-claude-code.md` (planning, Part A and the
-Codex-to-Claude-Code handover), `B-n8n.md` (Part B), and `proje-sonu.json` (the
+Codex-to-Claude-Code handover), `B-n8n.md` (Part B), and `proje-sonu-testler-ve-guncellemeler.md` (the
 final wrap-up prompts). Each prompt keeps its sequence number and phase label.
+At the user's request, a short side conversation at the very end (two questions about
+how handoff decisions are made, the follow-up request to document them, and the
+request to rename this file) was not recorded; this is also noted in that file.
 Prompts 1-13 were sent to Codex and 14 onward to Claude Code. Original message timestamps
 are unavailable and have not been fabricated. System/environment messages are
 excluded. Runtime classification instructions live in `A-mesaj-otomasyonu/llm_prompts/classify_prompt.txt`

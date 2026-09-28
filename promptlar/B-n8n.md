@@ -1,7 +1,7 @@
 # Bölüm B — Promptlar
 
 Bölüm B (`B-planning`) promptları.
-Promptlar silinmeden, sırasıyla ve yazıldığı gibi (yazım hataları dahil) aktarıldı. Sıra numaraları iki dosyada ortak, yani atlanan numaralar diğer dosyadadır. 1-13 arası Codex'e, 14 ve sonrası Claude Code'a yazıldı. 19 ve sonrası [`proje-sonu.json`](proje-sonu.json) dosyasında.
+Promptlar silinmeden, sırasıyla ve yazıldığı gibi (yazım hataları dahil) aktarıldı. Sıra numaraları üç dosyada ortak, yani atlanan numaralar diğer dosyalardadır. 1-13 arası Codex'e, 14 ve sonrası Claude Code'a yazıldı. 19 ve sonrası [`proje-sonu-testler-ve-guncellemeler.md`](proje-sonu-testler-ve-guncellemeler.md) dosyasında.
 Orijinal gönderim saatleri kayıtlı olmadığı için eklenmedi. 15. kayıt serbest metin değil, Claude Code'un çoktan seçmeli sorusuna verilen cevaplardır.
 
 ## 12. `B-planning` — Codex
