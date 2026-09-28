@@ -1,0 +1,15 @@
+MÜŞTERİ TALEPLERİ ÖZETİ
+Sınıflandırma: manual
+Model: -
+
+urun_sorusu: 4
+fiyat: 2
+siparis_durumu: 5
+iade_sikayet: 1
+hassas_konu: 1
+diger: 2
+
+Toplam: 15
+Temsilciye devredilecek: 12
+Teknik hata: 0
+Manuel demo: yalnızca önceden incelenmiş mesajlar; canlı LLM çağrısı yok.

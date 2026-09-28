@@ -1,0 +1,42 @@
+{
+  "format_version": 1,
+  "scope": "User-authored task messages from the start of this conversation, in order. Environment and system-injected messages are excluded. Original send timestamps were not available and are not invented.",
+  "prompts": [
+    {
+      "sequence": 1,
+      "phase": "planning",
+      "role": "user",
+      "content": "case-brief.md'yi ve mesajlar.jon'u incele ve hangi modelle en uygun biçimde yapılacağına karar ver "
+    },
+    {
+      "sequence": 2,
+      "phase": "planning",
+      "role": "user",
+      "content": "6 sol yok ki 6 astra var codex'te sadece"
+    },
+    {
+      "sequence": 3,
+      "phase": "planning",
+      "role": "user",
+      "content": "bu case'i oku iyice incele kararları ver soracağın soru olursa onları da sor önce bir implementasyon planı çıkart ben onaylarsam önce bölüm A sonra bölüm B'yi yapalım şimdi ilk olarak case-brief.md ve mesajlar.json'u incele"
+    },
+    {
+      "sequence": 4,
+      "phase": "A",
+      "role": "user",
+      "content": "Mesajları sen classify etmişsin fakat prod'a çıkacağa göre yapmamız lazım o yüzden sen bunu openai api chat completions ve gemini ile entegre et belki en son zaman kalsırsa local llm ile yapmak adına bi şey ekleriz ama şimdilik onu ekleme, ancak bende hali hazırda api key olmadığı için sen classify et ama  normal şartlarda api key ile yapacağız .env dosyası açıp ona da api keyleri girecek yer bırak ben uğraşıren api key ayarlamaya çalışacağım.\n\n\n\nBir yandan senden istediğim prompts diye bir json çıkart, içine yazdıklarımı tek tek json veya jsonl olarak sıra sıra not al\n\n\n\nistenmeyen etki başlığını hassas\\_konu olarka değiştir ve konular arasına \"-\" değil \"\\_\" yani alt tire koy.\n\nKodu türkçe yapma sadece konu başlıkları ve kullanıcıya gidecek olan kısımlar türkçe olacak\n\n\n\nSorularının cevapları:\n\n1. saat 11'de aldım teslim süresi 14'te yani 13.45 gibi kontroller ile bitmiş olması lazım\n2. Bu ilk sohbet kayıtları direkt olarak bu konuşmanın başından başlat.\n\n\n\nBölüm A'dan başla ben de bir yandan github reposu ayarlayacağım sen hiçbir şey push etmiyosun push atılması gerektiği yerlerde yazmayı planladığın commit mesajını bana iletiyosun ben kontrol edip ona göre ayarlayacağım.\n\nGit ignore dosyası oluştur .env ve gerekli başka bir şey olursa onları da ekle"
+    },
+    {
+      "sequence": 5,
+      "phase": "A",
+      "role": "user",
+      "content": "Sadece bu directory'e yaz kodları bu arada ve orijinal şu anda buradaki 2 dosyayı elleme onlar orijinal hali ile kalacak"
+    },
+    {
+      "sequence": 6,
+      "phase": "A",
+      "role": "user",
+      "content": "Ben github repo'sunu oluşturdum ve bağladım. Dediğim gibi commit zamanlarında bana tavsiye ettiğin mesajı ver sen commit atma ben kontrol edeceğim."
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "started_at": "2026-09-28T08:32:41.438806+00:00",
+  "finished_at": "2026-09-28T08:32:42.594467+00:00",
+  "provider": "manual",
+  "model": null,
+  "input_sha256": "e431d6ea36046f284ffa1dfc44904398423d30faf6a90553684a534b738c553a",
+  "message_count": 15,
+  "technical_errors": [],
+  "status": "completed",
+  "order_source": "https://dummyjson.com"
+}

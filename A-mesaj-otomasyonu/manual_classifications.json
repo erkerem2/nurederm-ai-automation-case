@@ -1,0 +1,20 @@
+{
+  "source": "Manually classified by the coding assistant from the supplied case; not an API response or a runtime LLM.",
+  "messages": [
+    {"id": 1, "message": "Merhaba, 12 numaralı siparişim nerede? Ne zaman kargoya verilir?", "classification": {"topic": "siparis_durumu", "secondary_topics": [], "is_spam": false}},
+    {"id": 2, "message": "5 numaralı siparişimin durumu nedir acaba?", "classification": {"topic": "siparis_durumu", "secondary_topics": [], "is_spam": false}},
+    {"id": 3, "message": "9999 numaralı siparişim hâlâ elime ulaşmadı, kontrol eder misiniz?", "classification": {"topic": "siparis_durumu", "secondary_topics": [], "is_spam": false}},
+    {"id": 4, "message": "Dün aldığım serumu kullandım, yüzüm yandı ve kızardı. Ne yapmalıyım?", "classification": {"topic": "hassas_konu", "secondary_topics": [], "is_spam": false}},
+    {"id": 5, "message": "Kutu ezik geldi, ürünü iade etmek istiyorum.", "classification": {"topic": "iade_sikayet", "secondary_topics": [], "is_spam": false}},
+    {"id": 6, "message": "Hi, where is my order #3? It has been a week.", "classification": {"topic": "siparis_durumu", "secondary_topics": [], "is_spam": false}},
+    {"id": 7, "message": "Takipçi kasmak ister misiniz? 🔥 %100 organik takipçi: bit.ly/takip-artir", "classification": {"topic": "diger", "secondary_topics": [], "is_spam": true}},
+    {"id": 8, "message": "Güneş kreminin fiyatı ne kadar? Bir de 4 numaralı siparişim ne zaman gelir?", "classification": {"topic": "siparis_durumu", "secondary_topics": ["fiyat"], "is_spam": false}},
+    {"id": 9, "message": "Retinol serumunuz var mı? Kuru ciltte kullanılır mı?", "classification": {"topic": "urun_sorusu", "secondary_topics": [], "is_spam": false}},
+    {"id": 10, "message": "Nemlendirici krem ne kadar?", "classification": {"topic": "fiyat", "secondary_topics": [], "is_spam": false}},
+    {"id": 11, "message": "C vitamini serumu hangi cilt tipine uygundur?", "classification": {"topic": "urun_sorusu", "secondary_topics": [], "is_spam": false}},
+    {"id": 12, "message": "Siparişler hangi kargo firmasıyla gönderiliyor?", "classification": {"topic": "diger", "secondary_topics": [], "is_spam": false}},
+    {"id": 13, "message": "Tonik 200 ml mi? İçeriğinde alkol var mı?", "classification": {"topic": "urun_sorusu", "secondary_topics": [], "is_spam": false}},
+    {"id": 14, "message": "İndirim kodunuz var mı, fiyat listesi paylaşır mısınız?", "classification": {"topic": "fiyat", "secondary_topics": [], "is_spam": false}},
+    {"id": 15, "message": "Merhaba, ürünleriniz hayvanlar üzerinde test ediliyor mu?", "classification": {"topic": "urun_sorusu", "secondary_topics": [], "is_spam": false}}
+  ]
+}
