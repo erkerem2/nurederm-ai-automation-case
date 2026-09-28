@@ -1,0 +1,12 @@
+{
+  "format_version": 1,
+  "scope": "User-authored prompts after the prompt history was split into promptlar/A-claude-code.md and promptlar/B-n8n.md (sequence 1-18). Same format, sequence continues. Sent to Claude Code.",
+  "prompts": [
+    {
+      "sequence": 19,
+      "phase": "proje-sonu",
+      "role": "user",
+      "content": "Tamam o zaman ilk olarak bizim prompts.json'u promptlar diye bir dosyaya ayır ve A B olarak ayır zaten hepsinin aşama label'ı var o labellar kalsın.\nBundan sonraki Yazdıklarımı da proje sonu gibi yeni bir json'a ekleyebiriliz aynı formatta olacak şekilde.\nReadme'ye bitiş saatini ve takılınan yerleri ekle ben şimdi burada gemini free tier kotası ve openai key olmama sorunundan bahset, başka aklına bir şey gelirse pop up ile bana sorabilirsin\n\nOnlar dışında\nÖzet sayfasını html olarak da görüntüleme yapalım\nve dediğin gibi sızıntı kontrolünü tekrarlanabilir hale getirelim"
+    }
+  ]
+}

@@ -18,6 +18,7 @@ from automation.domain import Classification, ConfigurationError, InputError, Me
 from automation.http_client import HttpError, JsonClient
 from automation.orders import OrderClient, extract_order_ids
 from automation.products import CatalogError, ProductClient
+from automation.report import render_html
 from automation.service import MessageService
 import main
 
@@ -465,9 +466,19 @@ class InputAndRunTests(unittest.TestCase):
             self.assertFalse(tickets[5]["devret"])
             self.assertEqual(tickets[6]["cevap_taslagi"], "")
             self.assertIn("Toplam: 15", (target / "ozet.txt").read_text(encoding="utf-8"))
+            page = (target / "ozet.html").read_text(encoding="utf-8")
+            self.assertIn("<b>15</b><span>Toplam mesaj</span>", page)
+            self.assertEqual(page.count("<tr><td>"), 15)
             metadata = json.loads((target / "run_metadata.json").read_text())
             self.assertEqual(metadata["provider"], "manual")
             self.assertEqual(metadata["status"], "completed")
+
+    def test_html_summary_escapes_ticket_text(self):
+        ticket = {"id": 1, "konu": "diger", "devret": True, "cevap_taslagi": "<script>alert(1)</script>", "not": "a & b"}
+        page = render_html([ticket], "manual", None, [], "2026-09-28")
+        self.assertNotIn("<script>", page)
+        self.assertIn("&lt;script&gt;", page)
+        self.assertIn("a &amp; b", page)
 
     def test_technical_failure_writes_handoffs_but_returns_nonzero(self):
         with tempfile.TemporaryDirectory(dir=APP_DIR) as folder, \

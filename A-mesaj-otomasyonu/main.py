@@ -16,6 +16,7 @@ from automation.domain import AutomationError, ConfigurationError, Topic, load_m
 from automation.http_client import JsonClient
 from automation.orders import OrderClient
 from automation.products import ProductClient
+from automation.report import render_html
 from automation.service import MessageService
 
 
@@ -72,7 +73,7 @@ def run(args) -> int:
             classifier = ManualClassifier(APP_DIR / "manual_classifications.json")
         else:
             factory = OpenAIClassifier if provider == "openai" else GeminiClassifier
-            default_model = "gpt-4.1-mini" if provider == "openai" else "gemini-3.8-flash"
+            default_model = "gpt-4.1-mini" if provider == "openai" else "gemini-2.5-flash-lite"
             prompt_path = Path(os.getenv("CLASSIFICATION_PROMPT_PATH", "A-mesaj-otomasyonu/llm_prompts/classify_prompt.txt"))
             system_prompt = load_prompt(prompt_path if prompt_path.is_absolute() else ROOT / prompt_path)
             prompt_hash = hashlib.sha256(system_prompt.encode("utf-8")).hexdigest()
@@ -112,6 +113,8 @@ def run(args) -> int:
     }
     write_atomic(args.output_dir / "talepler.json", json.dumps(tickets, ensure_ascii=False, indent=2, allow_nan=False) + "\n")
     write_atomic(args.output_dir / "ozet.txt", summary)
+    write_atomic(args.output_dir / "ozet.html",
+                 render_html(tickets, provider, classifier.model, errors, metadata["finished_at"]))
     write_atomic(args.output_dir / "run_metadata.json", json.dumps(metadata, indent=2) + "\n")
     print(summary)
     return 2 if errors else 0

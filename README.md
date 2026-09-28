@@ -12,8 +12,34 @@ drafts for a representative. It does not send customer messages.
 - First live DummyJSON run completed: 2026-09-28 11:32, Europe/Istanbul.
 - Target for all checks: 13:45; submission deadline: 14:00.
 - 12:11: work continued with Claude Code after the Codex usage limit was reached.
-- Part B workflow and verification script completed: 12:25, Europe/Istanbul.
-- Overall completion: pending final review.
+- Part B workflow and verification script completed: 12:18, Europe/Istanbul.
+- First successful live Gemini classification of all 15 messages: 12:38.
+- **Completed: ~12:35, Europe/Istanbul** (Part A, Part B and the product-search bonus).
+  The HTML summary, the repeatable live acceptance script and this documentation
+  were finished afterwards, before 13:00.
+
+## Where We Got Stuck / What Is Not Finished
+
+- **Gemini free tier quota.** The free tier allows 20 requests/day per project and
+  model. Sending one request per message (15 per run) plus retries used it up in the
+  first live attempts, so a full 15-message run on `gemini-3.8-flash` never completed.
+  A regenerated key did not help because it belonged to the same project and shared
+  the same quota. The fix was a batch mode (all messages in one request, retries
+  off) and switching to `gemini-2.5-flash-lite`, which then classified all 15
+  messages in one request with results identical to the manual reference.
+  `gemini-3.7-flash` did not answer even a minimal request within 60-90 s.
+- **No OpenAI key.** The OpenAI Chat Completions adapter is implemented and covered by
+  request/response contract tests, but has never been called with a real key.
+- **Key not saved to `.env`.** The regenerated Gemini key had not been saved in the
+  editor, so two batch attempts got HTTP 401 before this was noticed.
+- **Codex usage limit.** Work started with Codex; its usage limit was reached around
+  12:10 and the rest was done with Claude Code. Both tools' prompts are in `promptlar/`.
+- **Connection drops.** The Codex session disconnected twice (prompts 8 and 13), and
+  one paced Gemini run was interrupted without output.
+- **Not finished:** n8n was not installed or run live, so there is no execution
+  screenshot (the workflow's Code nodes are verified with Node.js instead). The
+  test store has no matching cosmetics, so the product-search bonus never lists a
+  product for the supplied messages (the matched path is unit-tested).
 
 ## Quick Start
 
@@ -35,6 +61,8 @@ Outputs in `A-mesaj-otomasyonu/`:
 
 - `talepler.json`: one ticket per input message, in the original order.
 - `ozet.txt`: the same one-page summary printed to the terminal.
+- `ozet.html`: the same summary as a single-page HTML report (counts plus a ticket
+  table); open it directly in a browser.
 - `run_metadata.json`: provider, model, timestamps, input hash, and technical errors.
 
 The delivered sample output uses manually reviewed classifications and a real
@@ -50,7 +78,7 @@ CLASSIFIER_PROVIDER=manual
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4.1-mini
 GEMINI_API_KEY=
-GEMINI_MODEL=gemini-3.8-flash
+GEMINI_MODEL=gemini-2.5-flash-lite
 HTTP_TIMEOUT_SECONDS=20
 HTTP_MAX_RETRIES=2
 LLM_MIN_INTERVAL_SECONDS=15
@@ -160,7 +188,7 @@ and 2 `diger`. Twelve messages were handed off. Messages 2 and 6 had verified or
 details, message 1 failed ownership verification, message 3 was not found, and
 message 8 had verified order details plus an unresolved price question.
 
-Thirty-seven offline tests pass. OpenAI has only been checked with contract tests because
+Thirty-eight offline tests pass. OpenAI has only been checked with contract tests because
 no OpenAI key was supplied. Gemini was also called live after its key was added:
 six messages succeeded in the initial unpaced run, but a full 15-message acceptance
 run could not be completed. A subsequent run using the external prompt file had
@@ -169,7 +197,13 @@ then explicitly reported an exhausted free-tier limit of 20 requests/day for thi
 project/model. See `A-mesaj-otomasyonu/verification.md` for the attempt history.
 Two single-request batch attempts (12:03 and 12:11) returned HTTP 401, i.e. the
 configured key was rejected; the key had not been updated in `.env` after it was
-regenerated. No batch classification result has been obtained yet.
+regenerated. At 12:38 a single batch request on `gemini-2.5-flash-lite` (the project's quota for
+`gemini-3.8-flash` was exhausted) classified all 15 messages with no technical
+errors. Topic and handoff decisions matched the manual reference for 15/15 messages,
+including ownership checks, sensitive handoffs and message 8's secondary price intent;
+extracted product queries matched except "moisturizer cream" vs "moisturizing cream".
+The committed evidence is in `A-mesaj-otomasyonu/live_runs/gemini-batch/`.
+`gemini-2.5-flash-lite` is therefore the default Gemini model.
 The delivered main outputs remain the successful manual + live DummyJSON run;
 failed Gemini results are not substituted or described as successful.
 
@@ -191,6 +225,19 @@ of 20 pages / 117 products):
 node B-n8n/tests/verify_workflow.mjs
 ```
 
+## Live Acceptance Checks
+
+`A-mesaj-otomasyonu/tests/live_acceptance.py` re-checks the delivered outputs
+against the real DummyJSON API and the repository state (36 checks). Order numbers
+are extracted with the application's own parser, not hard-coded. It verifies the
+output schema, sensitive handoffs, that a foreign cart's titles, total and owner
+never appear in any ticket, CLI failure exits, that no API key is committable, and
+that the original case files are unchanged. A deliberately injected leak makes it fail.
+
+```powershell
+.\.venv\Scripts\python.exe A-mesaj-otomasyonu/tests/live_acceptance.py
+```
+
 ## Deployment Boundary
 
 This is a production-oriented processing component, not a deployed messaging
@@ -206,8 +253,11 @@ classification can still be wrong even when its output matches the JSON schema.
 
 ## Prompt History and Sources
 
-`prompts.json` is the canonical ordered record of user-authored prompts from the
-start of this conversation, including corrections. Original message timestamps
+`promptlar/` holds every user-authored prompt verbatim and in order, including
+failed attempts and corrections: `A-claude-code.md` (planning, Part A and the
+Codex-to-Claude-Code handover), `B-n8n.md` (Part B), and `proje-sonu.json` (the
+final wrap-up prompts). Each prompt keeps its sequence number and phase label.
+Prompts 1-13 were sent to Codex and 14 onward to Claude Code. Original message timestamps
 are unavailable and have not been fabricated. System/environment messages are
 excluded. Runtime classification instructions live in `A-mesaj-otomasyonu/llm_prompts/classify_prompt.txt`
 and are selected through `CLASSIFICATION_PROMPT_PATH` in `.env`. Run metadata
@@ -216,6 +266,6 @@ records the loaded prompt's SHA-256 hash without copying its content.
 - [OpenAI structured outputs](https://developers.openai.com/api/docs/guides/structured-outputs)
 - [OpenAI GPT-4.1 mini](https://developers.openai.com/api/docs/models/gpt-4.1-mini)
 - [Gemini generateContent structured output](https://ai.google.dev/gemini-api/docs/generate-content/structured-output?hl=en)
-- [Gemini 3.8 Flash](https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash)
+- [Gemini 2.5 Flash-Lite](https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash-lite)
 
 Git commits, pushes, repository publication, and submission are handled by the user.

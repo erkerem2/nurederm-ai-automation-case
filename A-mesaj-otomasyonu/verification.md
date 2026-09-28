@@ -74,7 +74,7 @@ without including API credentials or raw provider error bodies.
    `runs/gemini-batch/` directory; its prompt SHA-256 differs because the batch
    instructions were appended to the prompt file.
 
-8. After the regenerated key was saved to `.env` (12:40), authentication passed,
+8. After the regenerated key was saved to `.env` (about 12:27), authentication passed,
    but the single batch request on `gemini-3.8-flash` returned a structured daily
    quota error (`http_429_daily_quota`): the new key belongs to the same project
    and shares its exhausted 20 requests/day. `models.list` (no generation quota)
@@ -84,21 +84,30 @@ without including API credentials or raw provider error bodies.
    Timeouts were previously reported as `network_unavailable`; they now have their
    own `timeout` error code so a slow provider is distinguishable from no network.
 
+9. At 12:38 the batch mode was retried on the smaller `gemini-2.5-flash-lite`
+   with one request (`--batch --max-retries 0`, 60 s timeout). Status `completed`,
+   0 technical errors. Compared with the manual reference, topic and handoff
+   matched for all 15 messages; 4 real product searches ran for messages 9, 10,
+   11 and 13 (no cosmetic matches). The only difference was the product query for
+   message 10 ("moisturizer cream" vs "moisturizing cream"), which does not change
+   the outcome. Output: `live_runs/gemini-batch/` (committed as evidence).
+   This is one successful run on a 15-message sample, not a statistical accuracy
+   evaluation.
+
 ## Product Search Bonus
 
-The manual run at 12:58 performed four real `/products/search` calls (messages 9,
+The manual run at about 12:33 performed four real `/products/search` calls (messages 9,
 10, 11 and 13). None returned a cosmetic product whose title matches the query, so
 all four drafts state that no catalog match was found and hand off. The matched
 path, category/title filtering, catalog failures and query validation are covered
-by offline tests. Live LLM extraction of `product_query` has not been verified.
+by offline tests. Live Gemini extraction of `product_query` was verified in the 12:38 batch run.
 
 ## Outstanding Verification
 
-- A complete 15-message Gemini acceptance run still needs an available quota.
+- Gemini was verified in batch mode only; the per-message (non-batch) mode has partial live evidence from earlier runs (messages 1-5 and 15).
 - OpenAI live verification still needs an OpenAI API key.
 - Runtime prompts are editable through `CLASSIFICATION_PROMPT_PATH`; future
   prompt/model changes need a fresh evaluation.
-- A live batch run with a valid Gemini key has not succeeded yet.
 
 No commits or pushes were performed by the coding assistant. The original
 `case-brief.md` and `mesajlar.json` were not modified.

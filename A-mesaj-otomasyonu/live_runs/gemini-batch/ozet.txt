@@ -1,0 +1,14 @@
+MÜŞTERİ TALEPLERİ ÖZETİ
+Sınıflandırma: gemini
+Model: gemini-2.5-flash-lite
+
+urun_sorusu: 4
+fiyat: 2
+siparis_durumu: 5
+iade_sikayet: 1
+hassas_konu: 1
+diger: 2
+
+Toplam: 15
+Temsilciye devredilecek: 12
+Teknik hata: 0

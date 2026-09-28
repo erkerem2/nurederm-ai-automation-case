@@ -1,0 +1,107 @@
+[
+  {
+    "id": 1,
+    "konu": "siparis_durumu",
+    "devret": true,
+    "cevap_taslagi": "Siparişin hesabınıza ait olduğunu doğrulayamadık. Yardımcı olması için sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "Sahiplik eşleşmedi; sipariş ayrıntıları paylaşılmadı. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 2,
+    "konu": "siparis_durumu",
+    "devret": false,
+    "cevap_taslagi": "5 numaralı siparişinizdeki ürünler: Samsung Galaxy Tab White (4 adet), Soft Drinks (4 adet), Powder Canister (4 adet). Toplam tutar: 1467,88 (test API'si para birimi belirtmiyor). Bu kaynaktan kargo durumu veya teslim tarihi görüntülenemiyor.",
+    "not": "Sipariş sahipliği doğrulandı. Kaynakta kargo veya teslimat bilgisi yok. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 3,
+    "konu": "siparis_durumu",
+    "devret": true,
+    "cevap_taslagi": "Bu numarayla sipariş kaydı bulunamadı. Lütfen sipariş numaranızı kontrol edin; temsilcimiz yardımcı olacak.",
+    "not": "Sipariş API'si 404 döndürdü. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 4,
+    "konu": "hassas_konu",
+    "devret": true,
+    "cevap_taslagi": "Yaşadığınız durumun değerlendirilmesi için sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "Hassas konu; teşhis, tedavi veya ürün önerisi üretilmedi. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 5,
+    "konu": "iade_sikayet",
+    "devret": true,
+    "cevap_taslagi": "İade veya şikâyet talebiniz için sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "İade/şikâyet işlemi temsilci tarafından değerlendirilmeli. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 6,
+    "konu": "siparis_durumu",
+    "devret": false,
+    "cevap_taslagi": "3 numaralı siparişinizdeki ürünler: Fish Steak (1 adet), iPhone 13 Pro (1 adet), Realme X (1 adet), Man Short Sleeve Shirt (5 adet), Dior J'adore (2 adet), Party Glasses (5 adet). Toplam tutar: 1794,85 (test API'si para birimi belirtmiyor). Bu kaynaktan kargo durumu veya teslim tarihi görüntülenemiyor.",
+    "not": "Sipariş sahipliği doğrulandı. Kaynakta kargo veya teslimat bilgisi yok. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 7,
+    "konu": "diger",
+    "devret": false,
+    "cevap_taslagi": "",
+    "not": "İstenmeyen reklam; yanıt üretilmedi, bağlantı açılmadı. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 8,
+    "konu": "siparis_durumu",
+    "devret": true,
+    "cevap_taslagi": "4 numaralı siparişinizdeki ürünler: Sports Sneakers Off White Red (3 adet), Dior J'adore (4 adet). Toplam tutar: 689,93 (test API'si para birimi belirtmiyor). Bu kaynaktan kargo durumu veya teslim tarihi görüntülenemiyor. Mesajınızdaki diğer sorular için de sizi temsilcimize yönlendiriyoruz.",
+    "not": "Sipariş sahipliği doğrulandı. Kaynakta kargo veya teslimat bilgisi yok. Ek konular temsilciye iletildi: fiyat. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 9,
+    "konu": "urun_sorusu",
+    "devret": true,
+    "cevap_taslagi": "Katalogumuzda bu ürünle eşleşen bir kayıt bulamadık. Sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "Ürün araması: 'retinol serum' için kozmetik kategorisinde eşleşme yok. Ürün uygunluğu, içerik ve güncel fiyat temsilci tarafından teyit edilmeli. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 10,
+    "konu": "fiyat",
+    "devret": true,
+    "cevap_taslagi": "Katalogumuzda bu ürünle eşleşen bir kayıt bulamadık. Sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "Ürün araması: 'moisturizer cream' için kozmetik kategorisinde eşleşme yok. Ürün uygunluğu, içerik ve güncel fiyat temsilci tarafından teyit edilmeli. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 11,
+    "konu": "urun_sorusu",
+    "devret": true,
+    "cevap_taslagi": "Katalogumuzda bu ürünle eşleşen bir kayıt bulamadık. Sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "Ürün araması: 'vitamin c serum' için kozmetik kategorisinde eşleşme yok. Ürün uygunluğu, içerik ve güncel fiyat temsilci tarafından teyit edilmeli. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 12,
+    "konu": "diger",
+    "devret": true,
+    "cevap_taslagi": "Sorunuz için doğrulanmış bilgiyi paylaşabilmesi adına sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "Ürün, fiyat veya mağaza politikası için doğrulanmış bilgi kaynağı bulunmuyor. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 13,
+    "konu": "urun_sorusu",
+    "devret": true,
+    "cevap_taslagi": "Katalogumuzda bu ürünle eşleşen bir kayıt bulamadık. Sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "Ürün araması: 'toner' için kozmetik kategorisinde eşleşme yok. Ürün uygunluğu, içerik ve güncel fiyat temsilci tarafından teyit edilmeli. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 14,
+    "konu": "fiyat",
+    "devret": true,
+    "cevap_taslagi": "Sorunuz için doğrulanmış bilgiyi paylaşabilmesi adına sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "Ürün, fiyat veya mağaza politikası için doğrulanmış bilgi kaynağı bulunmuyor. Sınıflandırma sağlayıcısı: gemini."
+  },
+  {
+    "id": 15,
+    "konu": "urun_sorusu",
+    "devret": true,
+    "cevap_taslagi": "Sorunuz için doğrulanmış bilgiyi paylaşabilmesi adına sizi müşteri temsilcimize yönlendiriyoruz.",
+    "not": "Ürün, fiyat veya mağaza politikası için doğrulanmış bilgi kaynağı bulunmuyor. Sınıflandırma sağlayıcısı: gemini."
+  }
+]
